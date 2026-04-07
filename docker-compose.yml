@@ -6,8 +6,7 @@ services:
       POSTGRES_USER: magaz
       POSTGRES_PASSWORD: magaz
       POSTGRES_DB: magaz
-    ports:
-      - "5432:5432"
+    # База данных доступна только внутри Docker-сети
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,8 +25,8 @@ services:
       DATABASE_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
       PAYMENT_DB_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
       PAYMENT_ADDR: ":8081"
-    ports:
-      - "8081:8081"
+      PAYMENT_ADDR: ":8081"
+    # Микросервис оплат доступен только для основного сервера внутри Docker-сети
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,7 +42,8 @@ services:
       PAYMENT_URL: http://payment:8081
       SERVER_ADDR: ":8080"
     ports:
-      - "8080:8080"
+      # Привязываем строго к localhost, чтобы снаружи нельзя было обойти Nginx
+      - "127.0.0.1:8080:8080"
     volumes:
       - uploads:/app/uploads
     depends_on:
