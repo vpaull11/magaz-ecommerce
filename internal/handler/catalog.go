@@ -60,9 +60,13 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 	// Resolve category slug → IDs (parent + all children)
 	var categoryIDs []int64
 	var attrDefs []*models.AttrDef
+	var activeCatName, catSeoTitle, catSeoDesc string
 	if catSlug != "" {
 		catObj, err2 := h.catRepo.FindBySlug(catSlug)
 		if err2 == nil {
+			activeCatName = catObj.Name
+			catSeoTitle   = catObj.SeoTitle
+			catSeoDesc    = catObj.SeoDescription
 			// Collect the category itself + all its children from the flat list
 			allCats, _ := h.catRepo.List()
 			categoryIDs = append(categoryIDs, catObj.ID)
@@ -92,17 +96,23 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 
 	type CatalogData struct {
 		*service.ProductPage
-		ActiveCategory string
-		SortBy         string
-		AttrDefs       []*models.AttrDef
-		AttrFilters    map[int64]string
+		ActiveCategory     string
+		ActiveCategoryName string
+		CategorySeoTitle   string
+		CategorySeoDesc    string
+		SortBy             string
+		AttrDefs           []*models.AttrDef
+		AttrFilters        map[int64]string
 	}
 	h.Render(w, r, "catalog.html", CatalogData{
-		ProductPage:    page,
-		ActiveCategory: catSlug,
-		SortBy:         sortBy,
-		AttrDefs:       attrDefs,
-		AttrFilters:    attrFilters,
+		ProductPage:        page,
+		ActiveCategory:     catSlug,
+		ActiveCategoryName: activeCatName,
+		CategorySeoTitle:   catSeoTitle,
+		CategorySeoDesc:    catSeoDesc,
+		SortBy:             sortBy,
+		AttrDefs:           attrDefs,
+		AttrFilters:        attrFilters,
 	})
 }
 

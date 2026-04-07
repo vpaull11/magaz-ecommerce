@@ -1,4 +1,24 @@
-{{define "title"}}{{.Data.Name}} — Magaz{{end}}
+{{define "seo_title"}}{{if .Data.SeoTitle}}{{.Data.SeoTitle}}{{else}}{{.Data.Name}} — {{.SiteName}}{{end}}{{end}}
+{{define "seo_desc"}}{{if .Data.SeoDescription}}{{.Data.SeoDescription}}{{else}}{{truncate .Data.Description 160}}{{end}}{{end}}
+{{define "og_type"}}product{{end}}
+{{define "og_image_extra"}}{{if .Data.ImageURL}}<meta property="og:image" content="{{.Data.ImageURL}}">{{end}}{{end}}
+{{define "json_ld"}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{.Data.Name}}",
+  "description": "{{.Data.Description}}",
+  "image": "{{.Data.ImageURL}}",
+  "offers": {
+    "@type": "Offer",
+    "price": "{{printf "%.2f" .Data.Price}}",
+    "priceCurrency": "RUB",
+    "availability": "https://schema.org/{{if gt .Data.Stock 0}}InStock{{else}}OutOfStock{{end}}"
+  }
+}
+</script>
+{{end}}
 {{define "content"}}
 <div class="container">
   <div class="breadcrumb">

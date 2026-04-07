@@ -26,7 +26,14 @@
             <td>{{.SortOrder}}</td>
             <td style="white-space:nowrap">
               <a href="/admin/categories/{{.ID}}/attrs" class="btn btn--sm btn--outline" style="margin-right:0.25rem">Атрибуты</a>
-              <button class="btn btn--sm btn--outline" onclick="openEditCat({{.ID}},'{{.Name}}','{{.Slug}}',{{if .ParentID}}{{.ParentID}}{{else}}0{{end}},{{.SortOrder}})">✏️</button>
+              <button class="btn btn--sm btn--outline edit-cat-btn"
+                      data-id="{{.ID}}"
+                      data-name="{{.Name}}"
+                      data-slug="{{.Slug}}"
+                      data-parent="{{if .ParentID}}{{.ParentID}}{{else}}0{{end}}"
+                      data-order="{{.SortOrder}}"
+                      data-seotitle="{{.SeoTitle}}"
+                      data-seodesc="{{.SeoDescription}}">✏️</button>
               <form method="POST" action="/admin/categories/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Удалить категорию?')">
                 {{$.CSRF}}
                 <button class="btn btn--sm btn--danger" type="submit">🗑</button>
@@ -66,6 +73,20 @@
         <label class="form-label">Порядок сортировки</label>
         <input class="form-input" type="number" name="sort_order" value="0">
       </div>
+      
+      <details class="card mt-2 mb-2" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:0.75rem;">
+        <summary style="cursor:pointer;font-weight:600;font-size:0.9rem">🔍 SEO настройки</summary>
+        <div style="margin-top:0.5rem">
+          <div class="form-group">
+            <label class="form-label" style="font-size:0.8rem">SEO title</label>
+            <input class="form-input" name="seo_title" maxlength="70">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" style="font-size:0.8rem">SEO description</label>
+            <textarea class="form-input form-textarea" name="seo_description" rows="2" maxlength="160"></textarea>
+          </div>
+        </div>
+      </details>
       <div class="form-actions">
         <button class="btn btn--primary" type="submit">Создать</button>
         <button class="btn btn--outline" type="button" onclick="document.getElementById('modal-new-cat').style.display='none'">Отмена</button>
@@ -99,6 +120,20 @@
         <label class="form-label">Порядок</label>
         <input id="edit-cat-order" class="form-input" type="number" name="sort_order" value="0">
       </div>
+
+      <details class="card mt-2 mb-2" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:0.75rem;">
+        <summary style="cursor:pointer;font-weight:600;font-size:0.9rem">🔍 SEO настройки</summary>
+        <div style="margin-top:0.5rem">
+          <div class="form-group">
+            <label class="form-label" style="font-size:0.8rem">SEO title</label>
+            <input id="edit-cat-seo-title" class="form-input" name="seo_title" maxlength="70">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" style="font-size:0.8rem">SEO description</label>
+            <textarea id="edit-cat-seo-desc" class="form-input form-textarea" name="seo_description" rows="2" maxlength="160"></textarea>
+          </div>
+        </div>
+      </details>
       <div class="form-actions">
         <button class="btn btn--primary" type="submit">Сохранить</button>
         <button class="btn btn--outline" type="button" onclick="document.getElementById('modal-edit-cat').style.display='none'">Отмена</button>
@@ -108,14 +143,24 @@
 </div>
 
 <script>
-function openEditCat(id, name, slug, parentId, sortOrder) {
-  document.getElementById('edit-cat-form').action = '/admin/categories/' + id + '/edit';
-  document.getElementById('edit-cat-name').value = name;
-  document.getElementById('edit-cat-slug').value = slug;
-  document.getElementById('edit-cat-order').value = sortOrder;
-  const sel = document.getElementById('edit-cat-parent');
-  for (let o of sel.options) { o.selected = (o.value == String(parentId)); }
-  document.getElementById('modal-edit-cat').style.display = 'flex';
-}
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.edit-cat-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const ds = e.currentTarget.dataset;
+      document.getElementById('edit-cat-form').action = '/admin/categories/' + ds.id + '/edit';
+      document.getElementById('edit-cat-name').value = ds.name || '';
+      document.getElementById('edit-cat-slug').value = ds.slug || '';
+      document.getElementById('edit-cat-order').value = ds.order || '0';
+      document.getElementById('edit-cat-seo-title').value = ds.seotitle || '';
+      document.getElementById('edit-cat-seo-desc').value = ds.seodesc || '';
+      
+      const sel = document.getElementById('edit-cat-parent');
+      for (let o of sel.options) { 
+        o.selected = (o.value === ds.parent); 
+      }
+      document.getElementById('modal-edit-cat').style.display = 'flex';
+    });
+  });
+});
 </script>
 {{end}}

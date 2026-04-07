@@ -1,0 +1,51 @@
+{{define "title"}}Глобальные настройки (SEO) — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <h1 class="page-title">Настройки сайта</h1>
+      
+      {{if .Flash}}<div class="toast {{.FlashType}}" style="position:static;margin-bottom:1rem;">{{.Flash}}</div>{{end}}
+
+      <div class="card" style="max-width:800px">
+        <form method="POST" action="/admin/settings" enctype="multipart/form-data">
+          {{.CSRF}}
+          <div class="form-group">
+            <label class="form-label" for="site_name">Название сайта (OG site_name / SEO fallback)</label>
+            <input class="form-input" id="site_name" name="site_name" type="text" value="{{index .Data "site_name"}}" placeholder="Magaz">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="site_description">Краткое описание сайта (OG description / SEO callback)</label>
+            <textarea class="form-input form-textarea" id="site_description" name="site_description" rows="3" placeholder="Современный интернет-магазин ...">{{index .Data "site_description"}}</textarea>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="robots_txt">Robots.txt конфигурация</label>
+            <textarea class="form-input form-textarea" id="robots_txt" name="robots_txt" rows="5" style="font-family:monospace; font-size:0.9rem" placeholder="User-agent: *...">{{index .Data "robots_txt"}}</textarea>
+            <small style="color:var(--c-muted); display:block; margin-top:0.25rem">Этот текст будет отдаваться по адресу <code>/robots.txt</code></small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="og_image">Общая картинка сайта (OG Image)</label>
+            {{$og := index .Data "og_image"}}
+            {{if $og}}
+              <div style="margin-bottom:1rem; border-radius:var(--radius); overflow:hidden; border:1px solid rgba(255,255,255,0.1); width:max-content">
+                <img src="{{$og}}" alt="OG Image" style="display:block; max-width:300px; max-height:150px; object-fit:cover;">
+              </div>
+            {{end}}
+            <input class="form-input" type="file" id="og_image" name="og_image" accept="image/jpeg,image/png,image/webp">
+            <small style="color:var(--c-muted); display:block; margin-top:0.25rem">Используется при расшаривании ссылок в соцсетях. Рекомендуемый размер: 1200x630px.</small>
+          </div>
+
+          <div class="form-actions mt-4">
+            <button class="btn btn--primary" type="submit">Сохранить настройки</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+{{end}}

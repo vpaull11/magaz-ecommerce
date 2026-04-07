@@ -12,7 +12,7 @@ type CategoryRepository struct{ db *sql.DB }
 func NewCategoryRepository(db *sql.DB) *CategoryRepository { return &CategoryRepository{db: db} }
 
 func (r *CategoryRepository) List() ([]*models.Category, error) {
-	rows, err := r.db.Query(`SELECT id, name, slug, parent_id, sort_order FROM categories ORDER BY sort_order, name`)
+	rows, err := r.db.Query(`SELECT id, name, slug, parent_id, sort_order, seo_title, seo_description FROM categories ORDER BY sort_order, name`)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (r *CategoryRepository) List() ([]*models.Category, error) {
 	var cats []*models.Category
 	for rows.Next() {
 		c := &models.Category{}
-		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder, &c.SeoTitle, &c.SeoDescription); err != nil {
 			return nil, err
 		}
 		cats = append(cats, c)
@@ -55,8 +55,8 @@ func BuildTree(cats []*models.Category) []*models.Category {
 func (r *CategoryRepository) FindBySlug(slug string) (*models.Category, error) {
 	c := &models.Category{}
 	err := r.db.QueryRow(
-		`SELECT id, name, slug, parent_id, sort_order FROM categories WHERE slug = $1`, slug,
-	).Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder)
+		`SELECT id, name, slug, parent_id, sort_order, seo_title, seo_description FROM categories WHERE slug = $1`, slug,
+	).Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder, &c.SeoTitle, &c.SeoDescription)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -66,8 +66,8 @@ func (r *CategoryRepository) FindBySlug(slug string) (*models.Category, error) {
 func (r *CategoryRepository) FindByID(id int64) (*models.Category, error) {
 	c := &models.Category{}
 	err := r.db.QueryRow(
-		`SELECT id, name, slug, parent_id, sort_order FROM categories WHERE id = $1`, id,
-	).Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder)
+		`SELECT id, name, slug, parent_id, sort_order, seo_title, seo_description FROM categories WHERE id = $1`, id,
+	).Scan(&c.ID, &c.Name, &c.Slug, &c.ParentID, &c.SortOrder, &c.SeoTitle, &c.SeoDescription)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -83,8 +83,8 @@ func (r *CategoryRepository) Create(c *models.Category) error {
 
 func (r *CategoryRepository) Update(c *models.Category) error {
 	_, err := r.db.Exec(
-		`UPDATE categories SET name=$1, slug=$2, parent_id=$3, sort_order=$4 WHERE id=$5`,
-		c.Name, c.Slug, c.ParentID, c.SortOrder, c.ID,
+		`UPDATE categories SET name=$1, slug=$2, parent_id=$3, sort_order=$4, seo_title=$5, seo_description=$6 WHERE id=$7`,
+		c.Name, c.Slug, c.ParentID, c.SortOrder, c.SeoTitle, c.SeoDescription, c.ID,
 	)
 	return err
 }

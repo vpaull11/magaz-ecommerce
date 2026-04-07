@@ -88,23 +88,27 @@ func (s *ProductService) Categories() ([]*models.Category, error) {
 }
 
 type ProductInput struct {
-	Name        string `validate:"required,min=2,max=255"`
-	Description string
-	Price       float64 `validate:"required,gt=0"`
-	Stock       int     `validate:"min=0"`
-	CategoryID  int64   `validate:"required"`
-	IsActive    bool
+	Name           string `validate:"required,min=2,max=255"`
+	Description    string
+	Price          float64 `validate:"required,gt=0"`
+	Stock          int     `validate:"min=0"`
+	CategoryID     int64   `validate:"required"`
+	IsActive       bool
+	SeoTitle       string
+	SeoDescription string
 }
 
 func (s *ProductService) Create(in ProductInput, imageURL string) (*models.Product, error) {
 	p := &models.Product{
-		Name:        strings.TrimSpace(in.Name),
-		Description: in.Description,
-		Price:       in.Price,
-		Stock:       in.Stock,
-		ImageURL:    imageURL,
-		CategoryID:  in.CategoryID,
-		IsActive:    in.IsActive,
+		Name:           strings.TrimSpace(in.Name),
+		Description:    in.Description,
+		Price:          in.Price,
+		Stock:          in.Stock,
+		ImageURL:       imageURL,
+		CategoryID:     in.CategoryID,
+		IsActive:       in.IsActive,
+		SeoTitle:       in.SeoTitle,
+		SeoDescription: in.SeoDescription,
 	}
 	if err := s.products.Create(p); err != nil {
 		return nil, err
@@ -123,6 +127,8 @@ func (s *ProductService) Update(id int64, in ProductInput, imageURL string) erro
 	p.Stock = in.Stock
 	p.CategoryID = in.CategoryID
 	p.IsActive = in.IsActive
+	p.SeoTitle = in.SeoTitle
+	p.SeoDescription = in.SeoDescription
 	if imageURL != "" {
 		p.ImageURL = imageURL
 	}

@@ -46,12 +46,18 @@ func main() {
 	categoryRepo := repository.NewCategoryRepository(database)
 	cartRepo     := repository.NewCartRepository(database)
 	orderRepo    := repository.NewOrderRepository(database)
+	settingsRepo := repository.NewSettingsRepository(database)
 	addressRepo  := repository.NewAddressRepository(database)
 	wishlistRepo := repository.NewWishlistRepository(database)
 	reviewRepo   := repository.NewReviewRepository(database)
 	attrRepo     := repository.NewAttrRepository(database)
 
 	// ─── Services ──────────────────────────────────────────────────────────
+	settingsSvc, err := service.NewSettingsService(settingsRepo)
+	if err != nil {
+		slog.Error("settings load failed", "err", err)
+		os.Exit(1)
+	}
 	authSvc    := service.NewAuthService(userRepo)
 	productSvc := service.NewProductService(productRepo, categoryRepo)
 	cartSvc    := service.NewCartService(cartRepo, productRepo)
@@ -71,7 +77,7 @@ func main() {
 	}
 
 	// ─── Template renderer (base) ──────────────────────────────────────────
-	base, err := handler.NewBase(store, cartSvc, "web/templates")
+	base, err := handler.NewBase(store, cartSvc, settingsSvc, "web/templates")
 	if err != nil {
 		slog.Error("template load failed", "err", err)
 		os.Exit(1)
@@ -86,6 +92,7 @@ func main() {
 	accountH  := handler.NewAccountHandler(base, authSvc, orderSvc, addressRepo)
 	checkoutH := handler.NewOrderCheckoutHandler(base, orderSvc, addressRepo, cartSvc)
 	adminH    := handler.NewAdminHandler(base, productSvc, orderSvc, userRepo, catSvc, attrRepo, cfg.UploadsDir)
+	seoH      := handler.NewSEOHandler(base, productRepo, categoryRepo, settingsSvc)
 
 	// ─── Rate limiters ─────────────────────────────────────────────────────
 	// globalLimiter: 300 req/min per IP — blocks floods across all routes
@@ -143,6 +150,8 @@ func main() {
 		r.Get("/catalog/{id:[0-9]+}", catalogH.ProductRedirect)         // 301 редирект старых ссылок
 		r.Get("/catalog/{slug}", catalogH.Catalog)                      // категория
 		r.Get("/catalog/{slug}/{page:[0-9]+}", catalogH.Catalog)        // категория + страница пагинации
+		r.Get("/sitemap.xml", seoH.Sitemap)
+		r.Get("/robots.txt",  seoH.Robots)
 	})
 
 	// Auth routes — rate-limited + small body (login/register forms only, no uploads)
@@ -186,6 +195,8 @@ func main() {
 		r.Use(middleware.RequireAdmin)
 		r.Use(middleware.MaxBodySize(10 * 1024 * 1024)) // 10 MB for product images
 		r.Get("/admin", adminH.Dashboard)
+		r.Get("/admin/settings", adminH.SettingsPage)
+		r.Post("/admin/settings", adminH.SaveSettings)
 		r.Get("/admin/products", adminH.Products)
 		r.Get("/admin/products/new", adminH.NewProductPage)
 		r.Post("/admin/products/new", adminH.CreateProduct)

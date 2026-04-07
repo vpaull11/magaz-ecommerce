@@ -76,6 +76,22 @@
           </div>
           {{end}}
 
+          <!-- SEO Settings -->
+          <details class="card mt-4" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);">
+            <summary style="cursor:pointer;padding:1rem;font-weight:600;user-select:none;">🔍 SEO настройки (Сайт и поисковики)</summary>
+            <div style="padding:0 1rem 1rem 1rem">
+              <div class="form-group">
+                <label class="form-label">SEO title <small style="color:var(--c-muted);font-weight:normal">(оставьте пустым — будет использоваться название товара)</small></label>
+                <input class="form-input" type="text" name="seo_title" maxlength="70"
+                       value="{{if .Data.Product}}{{.Data.Product.SeoTitle}}{{end}}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SEO description <small style="color:var(--c-muted);font-weight:normal">(до 160 символов)</small></label>
+                <textarea class="form-input form-textarea" name="seo_description" rows="2" maxlength="160">{{if .Data.Product}}{{.Data.Product.SeoDescription}}{{end}}</textarea>
+              </div>
+            </div>
+          </details>
+
           <div class="form-actions mt-4">
             <button class="btn btn--primary" type="submit">Сохранить</button>
             <a href="/admin/products" class="btn btn--outline">Отмена</a>

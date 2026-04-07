@@ -17,7 +17,8 @@ const productSelectSQL = `
 	SELECT p.id, p.name, p.description, p.price, p.stock,
 	       p.image_url, p.category_id, COALESCE(c.name,'') as category_name,
 	       p.is_active, p.rating_avg, p.review_count,
-	       p.created_at, p.updated_at
+	       p.created_at, p.updated_at,
+	       COALESCE(p.seo_title,'') as seo_title, COALESCE(p.seo_description,'') as seo_description
 	FROM products p
 	LEFT JOIN categories c ON c.id = p.category_id`
 
@@ -28,6 +29,7 @@ func scanProduct(row interface{ Scan(...any) error }) (*models.Product, error) {
 		&p.ImageURL, &p.CategoryID, &p.CategoryName,
 		&p.IsActive, &p.RatingAvg, &p.ReviewCount,
 		&p.CreatedAt, &p.UpdatedAt,
+		&p.SeoTitle, &p.SeoDescription,
 	)
 }
 
@@ -172,10 +174,12 @@ func (r *ProductRepository) Create(p *models.Product) error {
 func (r *ProductRepository) Update(p *models.Product) error {
 	_, err := r.db.Exec(
 		`UPDATE products SET name=$1, description=$2, price=$3, stock=$4,
-		 image_url=$5, category_id=$6, is_active=$7, updated_at=NOW()
-		 WHERE id=$8`,
+		 image_url=$5, category_id=$6, is_active=$7,
+		 seo_title=$8, seo_description=$9, updated_at=NOW()
+		 WHERE id=$10`,
 		p.Name, p.Description, p.Price, p.Stock,
-		p.ImageURL, p.CategoryID, p.IsActive, p.ID,
+		p.ImageURL, p.CategoryID, p.IsActive,
+		p.SeoTitle, p.SeoDescription, p.ID,
 	)
 	return err
 }

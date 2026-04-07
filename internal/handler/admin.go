@@ -164,12 +164,14 @@ func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	slug := strings.TrimSpace(r.FormValue("slug"))
+	seoTitle := strings.TrimSpace(r.FormValue("seo_title"))
+	seoDesc := strings.TrimSpace(r.FormValue("seo_description"))
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
 	var parentID *int64
 	if pid, err := strconv.ParseInt(r.FormValue("parent_id"), 10, 64); err == nil && pid > 0 {
 		parentID = &pid
 	}
-	if _, err := h.catSvc.Create(name, slug, parentID, sortOrder); err != nil {
+	if _, err := h.catSvc.Create(name, slug, parentID, sortOrder, seoTitle, seoDesc); err != nil {
 		http.Redirect(w, r, "/admin/categories?err="+err.Error(), http.StatusFound)
 		return
 	}
@@ -182,12 +184,14 @@ func (h *AdminHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	name := strings.TrimSpace(r.FormValue("name"))
 	slug := strings.TrimSpace(r.FormValue("slug"))
+	seoTitle := strings.TrimSpace(r.FormValue("seo_title"))
+	seoDesc := strings.TrimSpace(r.FormValue("seo_description"))
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
 	var parentID *int64
 	if pid, err := strconv.ParseInt(r.FormValue("parent_id"), 10, 64); err == nil && pid > 0 {
 		parentID = &pid
 	}
-	if err := h.catSvc.Update(id, name, slug, parentID, sortOrder); err != nil {
+	if err := h.catSvc.Update(id, name, slug, parentID, sortOrder, seoTitle, seoDesc); err != nil {
 		h.Flash(w, r, err.Error(), "error")
 	} else {
 		h.Flash(w, r, "Категория обновлена", "success")
@@ -262,6 +266,40 @@ func (h *AdminHandler) DeleteAttrDef(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	orders, total, _ := h.orderSvc.ListAll(1, 5)
 	h.Render(w, r, "admin_dashboard.html", map[string]any{"Orders": orders, "Total": total})
+}
+
+// GET /admin/settings
+func (h *AdminHandler) SettingsPage(w http.ResponseWriter, r *http.Request) {
+	settings := h.Settings.GetAll()
+	h.Render(w, r, "admin_settings.html", settings)
+}
+
+// POST /admin/settings
+func (h *AdminHandler) SaveSettings(w http.ResponseWriter, r *http.Request) {
+	keys := []string{"site_name", "site_description", "robots_txt"}
+	for _, key := range keys {
+		val := strings.TrimSpace(r.FormValue(key))
+		// For simplicity, we just save them sequentially.
+		_ = h.Settings.Set(key, val)
+	}
+
+	// Handle og_image upload
+	if file, header, err := r.FormFile("og_image"); err == nil {
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" {
+			filename := fmt.Sprintf("og_%d%s", time.Now().Unix(), ext)
+			outPath := filepath.Join(h.uploadsDir, filename)
+			if out, err2 := os.Create(outPath); err2 == nil {
+				io.Copy(out, file)
+				out.Close()
+				_ = h.Settings.Set("og_image", "/uploads/"+filename)
+			}
+		}
+		file.Close()
+	}
+
+	h.Flash(w, r, "Настройки успешно сохранены", "success")
+	http.Redirect(w, r, "/admin/settings", http.StatusFound)
 }
 
 // GET /admin/products
@@ -429,12 +467,14 @@ func (h *AdminHandler) formToProductInput(r *http.Request) service.ProductInput 
 	stock, _ := strconv.Atoi(r.FormValue("stock"))
 	catID, _ := strconv.ParseInt(r.FormValue("category_id"), 10, 64)
 	return service.ProductInput{
-		Name:        strings.TrimSpace(r.FormValue("name")),
-		Description: r.FormValue("description"),
-		Price:       price,
-		Stock:       stock,
-		CategoryID:  catID,
-		IsActive:    r.FormValue("is_active") == "on",
+		Name:           strings.TrimSpace(r.FormValue("name")),
+		Description:    r.FormValue("description"),
+		Price:          price,
+		Stock:          stock,
+		CategoryID:     catID,
+		IsActive:       r.FormValue("is_active") == "on",
+		SeoTitle:       strings.TrimSpace(r.FormValue("seo_title")),
+		SeoDescription: strings.TrimSpace(r.FormValue("seo_description")),
 	}
 }
 

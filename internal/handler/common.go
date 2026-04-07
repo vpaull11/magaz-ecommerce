@@ -19,6 +19,7 @@ import (
 type Base struct {
 	Store     *sessions.CookieStore
 	CartSvc   *service.CartService
+	Settings  *service.SettingsService
 	templates map[string]*template.Template
 }
 
@@ -47,15 +48,20 @@ var pageMap = []struct{ name, path string }{
 	{"wishlist.html", "account/wishlist.html"},
 }
 
-func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, tmplDir string) (*Base, error) {
+func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, settingsSvc *service.SettingsService, tmplDir string) (*Base, error) {
 	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
-		// mulfi: price (float64) × quantity (int)
 		"mulfi": func(a float64, b int) float64 { return a * float64(b) },
 		"string": func(v any) string { return fmt.Sprint(v) },
 		"statusLabel": func(s models.OrderStatus) string { return s.Label() },
 		"addrFull": func(a *models.Address) string { return a.Full() },
+		"truncate": func(s string, n int) string {
+			if len([]rune(s)) <= n {
+				return s
+			}
+			return string([]rune(s)[:n]) + "..."
+		},
 		"seq": func(start, end int) []int {
 			s := make([]int, 0, end-start+1)
 			for i := start; i <= end; i++ {
@@ -63,7 +69,6 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, tmplDir 
 			}
 			return s
 		},
-		// isActiveParent returns true if any child of cat matches activeSlug
 		"isActiveParent": func(activeSlug string, cat *models.Category) bool {
 			for _, child := range cat.Children {
 				if child.Slug == activeSlug {
@@ -90,19 +95,24 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, tmplDir 
 		templates[p.name] = t
 	}
 
-	return &Base{Store: store, CartSvc: cartSvc, templates: templates}, nil
+	return &Base{Store: store, CartSvc: cartSvc, Settings: settingsSvc, templates: templates}, nil
 }
 
 // PageData is the top-level struct passed to every template.
 type PageData struct {
-	User      *models.User
-	CartCount int
-	CartTotal float64
-	Flash     string
-	FlashType string // "success" | "error" | "info"
-	CSRF      template.HTML
-	CSRFValue string
-	Data      any
+	User            *models.User
+	CartCount       int
+	CartTotal       float64
+	Flash           string
+	FlashType       string // "success" | "error" | "info"
+	CSRF            template.HTML
+	CSRFValue       string
+	Data            any
+	// SEO globals (populated from SettingsService)
+	SiteName        string
+	SiteDescription string
+	OGImage         string
+	CanonicalURL    string
 }
 
 func (b *Base) render(w http.ResponseWriter, r *http.Request, tmplName string, data any, status int) {
@@ -115,11 +125,27 @@ func (b *Base) render(w http.ResponseWriter, r *http.Request, tmplName string, d
 	}
 
 	u := middleware.UserFromCtx(r)
+	siteName := "Magaz"
+	siteDesc := ""
+	ogImage := ""
+	if b.Settings != nil {
+		siteName = b.Settings.Get("site_name", "Magaz")
+		siteDesc = b.Settings.Get("site_description", "")
+		ogImage = b.Settings.Get("og_image", "")
+	}
+	scheme := "https"
+	if r.TLS == nil {
+		scheme = "http"
+	}
 	pd := PageData{
-		User: u,
-		CSRF: csrf.TemplateField(r),
-		CSRFValue: csrf.Token(r),
-		Data: data,
+		User:            u,
+		CSRF:            csrf.TemplateField(r),
+		CSRFValue:       csrf.Token(r),
+		Data:            data,
+		SiteName:        siteName,
+		SiteDescription: siteDesc,
+		OGImage:         ogImage,
+		CanonicalURL:    scheme + "://" + r.Host + r.URL.Path,
 	}
 	if u != nil {
 		if summary, err := b.CartSvc.Get(u.ID); err == nil {

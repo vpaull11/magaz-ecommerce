@@ -36,15 +36,22 @@ func (s *CategoryService) FindByID(id int64) (*models.Category, error) {
 }
 
 // Create creates a new category, generating a slug if not provided.
-func (s *CategoryService) Create(name, slug string, parentID *int64, sortOrder int) (*models.Category, error) {
+func (s *CategoryService) Create(name, slug string, parentID *int64, sortOrder int, seoTitle, seoDesc string) (*models.Category, error) {
 	if slug == "" {
 		slug = slugify(name)
 	}
-	c := &models.Category{Name: name, Slug: slug, ParentID: parentID, SortOrder: sortOrder}
+	c := &models.Category{
+		Name:           name,
+		Slug:           slug,
+		ParentID:       parentID,
+		SortOrder:      sortOrder,
+		SeoTitle:       seoTitle,
+		SeoDescription: seoDesc,
+	}
 	return c, s.cats.Create(c)
 }
 
-func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, sortOrder int) error {
+func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, sortOrder int, seoTitle, seoDesc string) error {
 	c, err := s.cats.FindByID(id)
 	if err != nil {
 		return err
@@ -56,6 +63,8 @@ func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, s
 	c.Slug = slug
 	c.ParentID = parentID
 	c.SortOrder = sortOrder
+	c.SeoTitle = seoTitle
+	c.SeoDescription = seoDesc
 	return s.cats.Update(c)
 }
 

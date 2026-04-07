@@ -60,12 +60,24 @@ func (u *User) IsAdmin() bool { return u.Role == RoleAdmin }
 // ─── Category ────────────────────────────────────────────────────────────────
 
 type Category struct {
-	ID        int64      `db:"id"`
-	Name      string     `db:"name"`
-	Slug      string     `db:"slug"`
-	ParentID  *int64     `db:"parent_id"`
-	SortOrder int        `db:"sort_order"`
-	Children  []*Category `db:"-"`  // populated in-memory
+	ID             int64      `db:"id"`
+	Name           string     `db:"name"`
+	Slug           string     `db:"slug"`
+	ParentID       *int64     `db:"parent_id"`
+	SortOrder      int        `db:"sort_order"`
+	SeoTitle       string     `db:"seo_title"`
+	SeoDescription string     `db:"seo_description"`
+	Children       []*Category `db:"-"` // populated in-memory
+}
+
+// SiteSettings is a flat key→value map loaded from the site_settings table.
+type SiteSettings map[string]string
+
+func (s SiteSettings) Get(key, fallback string) string {
+	if v, ok := s[key]; ok && v != "" {
+		return v
+	}
+	return fallback
 }
 
 // ─── Attributes ───────────────────────────────────────────────────────────────
@@ -101,13 +113,15 @@ func (av *AttrValue) DisplayValue() string {
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 type Product struct {
-	ID           int64      `db:"id" json:"id"`
-	Name         string     `db:"name" json:"name"`
-	Description  string     `db:"description" json:"description"`
-	Price        float64    `db:"price" json:"price"`
-	Stock        int        `db:"stock" json:"stock"`
-	ImageURL     string     `db:"image_url" json:"image_url"`
-	CategoryID   int64      `db:"category_id" json:"category_id"`
+	ID             int64      `db:"id" json:"id"`
+	Name           string     `db:"name" json:"name"`
+	Description    string     `db:"description" json:"description"`
+	Price          float64    `db:"price" json:"price"`
+	Stock          int        `db:"stock" json:"stock"`
+	ImageURL       string     `db:"image_url" json:"image_url"`
+	CategoryID     int64      `db:"category_id" json:"category_id"`
+	SeoTitle       string     `db:"seo_title" json:"-"`
+	SeoDescription string     `db:"seo_description" json:"-"`
 	CategoryName string     `db:"category_name" db_ignore:"true" json:"category_name,omitempty"`
 	IsActive     bool       `db:"is_active" json:"is_active"`
 	RatingAvg    float64    `db:"rating_avg" json:"rating_avg"`
