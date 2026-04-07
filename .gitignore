@@ -1,0 +1,37 @@
+# ─── Go binaries ─────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+magaz
+payment
+
+# ─── Test artifacts ──────────────────────────────────────────────
+*.test
+*.out
+coverage.html
+
+# ─── Build output ────────────────────────────────────────────────
+/dist/
+/bin/
+
+# ─── Environment / Secrets ───────────────────────────────────────
+# NEVER commit .env — it contains real database passwords and secrets!
+.env
+*.env
+!.env.example
+
+# ─── Uploads ─────────────────────────────────────────────────────
+/uploads/
+
+# ─── IDE / OS ────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Module cache ────────────────────────────────────────────────
+vendor/

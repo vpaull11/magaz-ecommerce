@@ -1,0 +1,74 @@
+{{define "title"}}Оформление заказа — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <h1 class="page-title">Оформление заказа</h1>
+  <div class="checkout-layout">
+    <div class="checkout-form">
+      <form method="POST" action="/cart/checkout" id="checkout-form" novalidate>
+        {{.CSRF}}
+        <div class="checkout-section">
+          <h2 class="checkout-section__title">🚚 Адрес доставки</h2>
+          {{if .Data.Addresses}}
+            {{range .Data.Addresses}}
+            <label class="addr-option">
+              <input type="radio" name="address_id" value="{{.ID}}" {{if .IsDefault}}checked{{end}}>
+              <span class="addr-option__label">
+                <strong>{{.Label}}</strong> — {{addrFull .}}
+              </span>
+            </label>
+            {{end}}
+            <a href="/account/addresses" class="link-sm mt-2">+ Добавить новый адрес</a>
+          {{else}}
+            <div class="alert alert--info">
+              У вас нет сохранённых адресов. <a href="/account/addresses">Добавьте адрес</a>.
+            </div>
+          {{end}}
+        </div>
+        <div class="checkout-section">
+          <h2 class="checkout-section__title">💳 Данные карты</h2>
+          <div class="card-preview" id="card-preview">
+            <div class="card-preview__number">•••• •••• •••• ••••</div>
+            <div class="card-preview__meta">
+              <span>КАРТА</span>
+              <span id="card-exp-preview">MM/YY</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="card_number">Номер карты</label>
+            <input id="card_number" class="form-input" type="text" name="card_number"
+                   placeholder="4242 4242 4242 4242" maxlength="19" required inputmode="numeric">
+            <p class="form-hint">Тест: 4242... = успех &nbsp;|&nbsp; 4000... = отказ</p>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="expiry">Срок действия</label>
+              <input id="expiry" class="form-input" type="text" name="expiry" placeholder="MM/YY" maxlength="5" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cvv">CVV</label>
+              <input id="cvv" class="form-input" type="password" name="cvv" placeholder="•••" maxlength="4" required minlength="3">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn--primary btn--full btn--lg mt-4" id="pay-btn">
+          Оплатить {{printf "%.2f" .Data.Summary.Total}} ₽
+        </button>
+      </form>
+    </div>
+    <div class="checkout-summary">
+      <h3 class="checkout-summary__title">Ваш заказ</h3>
+      {{range .Data.Summary.Items}}
+      <div class="checkout-summary__item">
+        <span class="checkout-summary__item-name">{{.Product.Name}} × {{.Item.Quantity}}</span>
+        <span>{{printf "%.2f" (mulfi .Product.Price .Item.Quantity)}} ₽</span>
+      </div>
+      {{end}}
+      <hr>
+      <div class="checkout-summary__total">
+        <strong>Итого</strong>
+        <strong>{{printf "%.2f" .Data.Summary.Total}} ₽</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

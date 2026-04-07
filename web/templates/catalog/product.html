@@ -1,0 +1,90 @@
+{{define "title"}}{{.Data.Name}} — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="breadcrumb">
+    <a href="/">Главная</a> / <a href="/catalog">Каталог</a> / {{.Data.Name}}
+  </div>
+  <div class="product-detail">
+    <div class="product-detail__gallery tilt-card">
+      <div class="skeleton" style="width: 100%; height: 100%; border-radius: var(--radius)">
+        {{if .Data.ImageURL}}<img src="{{.Data.ImageURL}}" alt="{{.Data.Name}}" class="product-detail__img">
+        {{else}}<div class="product-detail__img-placeholder">📦</div>{{end}}
+      </div>
+    </div>
+    <div class="product-detail__info">
+      <span class="product-detail__cat">{{.Data.CategoryName}}</span>
+      <h1 class="product-detail__name">{{.Data.Name}}</h1>
+      <p class="product-detail__desc">{{.Data.Description}}</p>
+      <div class="product-detail__price">{{printf "%.2f" .Data.Price}} ₽</div>
+      {{if gt .Data.Stock 0}}
+        <p class="product-detail__stock">✅ В наличии: {{.Data.Stock}} шт.</p>
+        {{if .User}}
+          <form method="POST" action="/cart/add">
+            {{.CSRF}}
+            <input type="hidden" name="product_id" value="{{.Data.ID}}">
+            <div class="qty-row">
+              <label class="form-label">Количество</label>
+              <input type="number" name="quantity" value="1" min="1" max="{{.Data.Stock}}" class="form-input qty-input">
+            </div>
+            <div style="display: flex; align-items: center; margin-top: 1rem;">
+              <button type="submit" class="btn btn--primary btn--lg btn--full">🛒 В корзину</button>
+              <button type="button" class="btn-wishlist" data-product-id="{{.Data.ID}}" title="В избранное">♡</button>
+            </div>
+          </form>
+        {{else}}
+          <a href="/auth/login" class="btn btn--primary btn--lg btn--full mt-4">Войдите, чтобы купить</a>
+        {{end}}
+      {{else}}
+        <p class="product-detail__stock product-detail__stock--out">❌ Нет в наличии</p>
+      {{end}}
+    </div>
+  </div>
+
+  <!-- Reviews Section -->
+  <div class="reviews-section">
+    <h3>Отзывы ({{.Data.ReviewCount}})</h3>
+    {{if gt .Data.RatingAvg 0.0}}
+      <div class="stars">Средний рейтинг: {{printf "%.1f" .Data.RatingAvg}} / 5</div>
+    {{end}}
+    
+    {{if .User}}
+      <form class="review-form" method="POST" action="/api/reviews/add" onsubmit="
+          event.preventDefault();
+          const fd = new FormData(this);
+          fetch('/api/reviews/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{.CSRFValue}}' },
+            body: JSON.stringify({ product_id: parseInt(fd.get('product_id')), rating: parseInt(fd.get('rating')), comment: fd.get('comment') })
+          }).then(res => res.json()).then(data => { if(data.success) { showToast('Отзыв добавлен!', 'success'); setTimeout(()=>location.reload(), 1000); } else showToast('Ошибка', 'error'); });
+        ">
+        <h4>Оставить отзыв</h4>
+        <input type="hidden" name="product_id" value="{{.Data.ID}}">
+        <div class="form-row">
+          <label class="form-label">Оценка</label>
+          <div class="rating-select">
+            <select name="rating" class="form-input" required>
+              <option value="5">5 Звезд ⭐⭐⭐⭐⭐</option>
+              <option value="4">4 Звезды ⭐⭐⭐⭐</option>
+              <option value="3">3 Звезды ⭐⭐⭐</option>
+              <option value="2">2 Звезды ⭐⭐</option>
+              <option value="1">1 Звезда ⭐</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row mt-2">
+          <label class="form-label">Комментарий</label>
+          <textarea name="comment" class="form-input" rows="3" placeholder="Расскажите о товаре..."></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary mt-2">Отправить отзыв</button>
+      </form>
+    {{else}}
+      <p class="mt-4"><a href="/auth/login" class="text-primary">Войдите</a>, чтобы оставить отзыв.</p>
+    {{end}}
+
+    <div class="review-list">
+      <!-- We load reviews dynamically or just show it if server provides it. Since handler is not passing reviews yet, let's keep it simple for now -->
+      <div class="mt-2 text-muted">Чтобы увидеть все отзывы, подождите обновление системы.</div>
+    </div>
+  </div>
+</div>
+{{end}}

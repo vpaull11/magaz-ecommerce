@@ -1,0 +1,37 @@
+{{define "title"}}Заказы — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <h1 class="page-title">Заказы ({{.Data.Total}})</h1>
+      <table class="table">
+        <thead><tr><th>#</th><th>Пользователь</th><th>Сумма</th><th>Статус</th><th>Дата</th><th>Действие</th></tr></thead>
+        <tbody>
+        {{range .Data.Orders}}
+        <tr>
+          <td>#{{.ID}}</td>
+          <td>{{.UserID}}</td>
+          <td>{{printf "%.2f" .TotalAmount}} ₽</td>
+          <td><span class="status-badge status-badge--{{.Status}}">{{statusLabel .Status}}</span></td>
+          <td>{{.CreatedAt.Format "02.01.2006 15:04"}}</td>
+          <td>
+            <form method="POST" action="/admin/orders/status?id={{.ID}}" class="inline-form">
+              {{$.CSRF}}
+              <select name="status" class="form-input form-input--sm" onchange="this.form.submit()">
+                <option value="pending"   {{if eq .Status "pending"}}selected{{end}}>Ожидает</option>
+                <option value="paid"      {{if eq .Status "paid"}}selected{{end}}>Оплачен</option>
+                <option value="shipped"   {{if eq .Status "shipped"}}selected{{end}}>Отправлен</option>
+                <option value="done"      {{if eq .Status "done"}}selected{{end}}>Выполнен</option>
+                <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Отменён</option>
+              </select>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}

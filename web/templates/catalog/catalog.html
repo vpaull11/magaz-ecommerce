@@ -1,0 +1,50 @@
+{{define "title"}}Каталог — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="catalog-layout">
+    <aside class="sidebar">
+      <h3 class="sidebar__title">Категории</h3>
+      <ul class="sidebar__list">
+        <li><a href="/catalog" class="sidebar__link {{if eq .Data.ActiveCategory ""}}sidebar__link--active{{end}}">Все товары</a></li>
+        {{range .Data.Categories}}
+        <li><a href="/catalog?category={{.Slug}}" class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">{{.Name}}</a></li>
+        {{end}}
+      </ul>
+    </aside>
+    <div class="catalog-main">
+      <div class="catalog-header">
+        <h1 class="page-title">Каталог</h1>
+        <span class="catalog-count">{{.Data.Total}} товаров</span>
+      </div>
+      <div class="product-grid">
+        {{range .Data.Products}}
+        <div class="product-card tilt-card">
+          <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+            {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
+            {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
+          </a>
+          <div class="product-card__body">
+            <h3 class="product-card__name"><a href="/catalog/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
+            <p class="product-card__cat">{{.CategoryName}}</p>
+            <div class="product-card__footer">
+              <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>
+              {{if gt .Stock 0}}<span class="badge badge--green">В наличии</span>
+              {{else}}<span class="badge badge--red">Нет в наличии</span>{{end}}
+            </div>
+          </div>
+        </div>
+        {{else}}<div class="empty-state"><p>Товары не найдены</p></div>{{end}}
+      </div>
+      {{if gt .Data.TotalPages 1}}
+      <div class="pagination">
+        {{$cat := .Data.ActiveCategory}}
+        {{range seq 1 .Data.TotalPages}}
+        <a href="/catalog?category={{$cat}}&page={{.}}"
+           class="pagination__btn {{if eq . $.Data.Page}}pagination__btn--active{{end}}">{{.}}</a>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

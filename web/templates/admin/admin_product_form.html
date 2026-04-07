@@ -1,0 +1,69 @@
+{{define "title"}}{{if .Data.Product}}Редактировать товар{{else}}Новый товар{{end}} — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <h1 class="page-title">{{if .Data.Product}}Редактировать товар{{else}}Новый товар{{end}}</h1>
+      <div class="card">
+        <form method="POST"
+              action="{{if .Data.Product}}/admin/products/edit?id={{.Data.Product.ID}}{{else}}/admin/products/new{{end}}"
+              enctype="multipart/form-data">
+          {{.CSRF}}
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label class="form-label" for="name">Название *</label>
+              <input id="name" class="form-input" type="text" name="name"
+                     value="{{if .Data.Product}}{{.Data.Product.Name}}{{end}}"
+                     required minlength="2" maxlength="255">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="category_id">Категория *</label>
+              <select id="category_id" class="form-input" name="category_id" required>
+                {{range .Data.Categories}}
+                <option value="{{.ID}}"
+                  {{if $.Data.Product}}{{if eq $.Data.Product.CategoryID .ID}}selected{{end}}{{end}}>
+                  {{.Name}}
+                </option>
+                {{end}}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="description">Описание</label>
+            <textarea id="description" class="form-input form-textarea" name="description" rows="4">{{if .Data.Product}}{{.Data.Product.Description}}{{end}}</textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="price">Цена (₽) *</label>
+              <input id="price" class="form-input" type="number" name="price" step="0.01" min="0"
+                     value="{{if .Data.Product}}{{printf "%.2f" .Data.Product.Price}}{{end}}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stock">Остаток на складе</label>
+              <input id="stock" class="form-input" type="number" name="stock" min="0"
+                     value="{{if .Data.Product}}{{.Data.Product.Stock}}{{else}}0{{end}}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="image">Изображение (jpg/png/webp)</label>
+            {{if .Data.Product}}{{if .Data.Product.ImageURL}}
+              <div class="current-img"><img src="{{.Data.Product.ImageURL}}" alt="текущее" style="max-height:120px"></div>
+            {{end}}{{end}}
+            <input id="image" class="form-input" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
+          </div>
+          <div class="form-group form-group--check">
+            <input id="is_active" type="checkbox" name="is_active"
+                   {{if .Data.Product}}{{if .Data.Product.IsActive}}checked{{end}}{{else}}checked{{end}}>
+            <label for="is_active">Активен (отображается в каталоге)</label>
+          </div>
+          <div class="form-actions mt-4">
+            <button class="btn btn--primary" type="submit">Сохранить</button>
+            <a href="/admin/products" class="btn btn--outline">Отмена</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

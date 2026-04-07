@@ -1,0 +1,38 @@
+{{define "title"}}Главная — Magaz{{end}}
+{{define "content"}}
+<section class="hero">
+  <div class="container hero__inner">
+    <div class="hero__text">
+      <h1 class="hero__title">Лучшие товары<br>с доставкой по России</h1>
+      <p class="hero__sub">Тысячи товаров в каталоге. Быстрая доставка. Удобная оплата.</p>
+      <a href="/catalog" class="btn btn--primary btn--lg">Перейти в каталог →</a>
+    </div>
+    <div class="hero__visual">🛍️</div>
+  </div>
+</section>
+<section class="section">
+  <div class="container">
+    <h2 class="section__title">Новинки</h2>
+    <div class="product-grid">
+      {{range .Data.Products}}
+      <div class="product-card tilt-card">
+        <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+          {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
+          {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
+        </a>
+        <div class="product-card__body">
+          <h3 class="product-card__name"><a href="/catalog/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
+          <p class="product-card__cat">{{.CategoryName}}</p>
+          <div class="product-card__footer">
+            <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>
+            {{if gt .Stock 0}}<span class="badge badge--green">В наличии</span>
+            {{else}}<span class="badge badge--red">Нет</span>{{end}}
+          </div>
+        </div>
+      </div>
+      {{else}}<p class="empty">Товаров пока нет.</p>{{end}}
+    </div>
+    <div class="center mt-6"><a href="/catalog" class="btn btn--outline">Весь каталог →</a></div>
+  </div>
+</section>
+{{end}}

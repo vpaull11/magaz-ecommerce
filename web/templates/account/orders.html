@@ -1,0 +1,30 @@
+{{define "title"}}Мои заказы — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="account-layout">
+    {{template "account-nav" .}}
+    <div class="account-content">
+      <h1 class="page-title">Мои заказы</h1>
+      {{if .Data}}
+      <div class="orders-list">
+        {{range .Data}}
+        <a href="/account/orders/detail?id={{.ID}}" class="order-card">
+          <div class="order-card__id">#{{.ID}}</div>
+          <div class="order-card__date">{{.CreatedAt.Format "02.01.2006"}}</div>
+          <div class="order-card__status"><span class="status-badge status-badge--{{.Status}}">{{statusLabel .Status}}</span></div>
+          <div class="order-card__total">{{printf "%.2f" .TotalAmount}} ₽</div>
+          <div class="order-card__arrow">→</div>
+        </a>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="empty-state">
+        <div class="empty-state__icon">📦</div>
+        <p class="empty-state__text">Заказов пока нет</p>
+        <a href="/catalog" class="btn btn--primary mt-4">Перейти в каталог</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

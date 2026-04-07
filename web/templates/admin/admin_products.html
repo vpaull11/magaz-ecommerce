@@ -1,0 +1,36 @@
+{{define "title"}}Товары — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <div class="admin-page-header">
+        <h1 class="page-title">Товары ({{.Data.Total}})</h1>
+        <a href="/admin/products/new" class="btn btn--primary">+ Добавить товар</a>
+      </div>
+      <table class="table">
+        <thead><tr><th>#</th><th>Название</th><th>Категория</th><th>Цена</th><th>Склад</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {{range .Data.Products}}
+        <tr>
+          <td>{{.ID}}</td>
+          <td><a href="/catalog/{{.ID}}">{{.Name}}</a></td>
+          <td>{{.CategoryName}}</td>
+          <td>{{printf "%.2f" .Price}} ₽</td>
+          <td>{{.Stock}}</td>
+          <td>{{if .IsActive}}<span class="badge badge--green">Активен</span>{{else}}<span class="badge badge--red">Скрыт</span>{{end}}</td>
+          <td class="table-actions">
+            <a href="/admin/products/edit?id={{.ID}}" class="btn btn--sm btn--outline">Изм.</a>
+            <form method="POST" action="/admin/products/delete?id={{.ID}}" style="display:inline">
+              {{$.CSRF}}
+              <button class="btn btn--sm btn--danger" type="submit" onclick="return confirm('Деактивировать товар?')">Удал.</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}

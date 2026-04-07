@@ -1,0 +1,58 @@
+{{define "title"}}Корзина — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <h1 class="page-title">Корзина</h1>
+  {{if .Data.Items}}
+  <div class="cart-layout">
+    <div class="cart-items">
+      {{range .Data.Items}}
+      <div class="cart-item">
+        <div class="cart-item__img-wrap">
+          {{if .Product.ImageURL}}<img src="{{.Product.ImageURL}}" alt="{{.Product.Name}}" class="cart-item__img">
+          {{else}}<div class="cart-item__img-placeholder">📦</div>{{end}}
+        </div>
+        <div class="cart-item__info">
+          <a href="/catalog/{{.Product.ID}}" class="cart-item__name">{{.Product.Name}}</a>
+          <p class="cart-item__price">{{printf "%.2f" .Product.Price}} ₽ / шт.</p>
+        </div>
+        <div class="cart-item__actions">
+          <form method="POST" action="/cart/update" class="qty-form">
+            {{$.CSRF}}
+            <input type="hidden" name="product_id" value="{{.Product.ID}}">
+            <input type="number" name="quantity" value="{{.Item.Quantity}}" min="0" max="{{.Product.Stock}}"
+                   class="form-input qty-input" onchange="this.form.submit()">
+          </form>
+          <form method="POST" action="/cart/remove">
+            {{$.CSRF}}
+            <input type="hidden" name="product_id" value="{{.Product.ID}}">
+            <button type="submit" class="btn-icon btn-icon--danger" title="Удалить">✕</button>
+          </form>
+        </div>
+        <div class="cart-item__subtotal">{{printf "%.2f" (mulfi .Product.Price .Item.Quantity)}} ₽</div>
+      </div>
+      {{end}}
+    </div>
+    <div class="cart-summary">
+      <h3 class="cart-summary__title">Итого</h3>
+      <div class="cart-summary__row">
+        <span>Товары ({{.Data.Count}} шт.)</span>
+        <span>{{printf "%.2f" .Data.Total}} ₽</span>
+      </div>
+      <hr>
+      <div class="cart-summary__total">
+        <span>К оплате</span>
+        <strong>{{printf "%.2f" .Data.Total}} ₽</strong>
+      </div>
+      <a href="/cart/checkout" class="btn btn--primary btn--full mt-4">Оформить заказ →</a>
+      <a href="/catalog" class="btn btn--outline btn--full mt-2">Продолжить покупки</a>
+    </div>
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <div class="empty-state__icon">🛒</div>
+    <p class="empty-state__text">Ваша корзина пуста</p>
+    <a href="/catalog" class="btn btn--primary mt-4">Перейти в каталог</a>
+  </div>
+  {{end}}
+</div>
+{{end}}

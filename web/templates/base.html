@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Magaz — современный интернет-магазин">
+  <title>{{block "title" .}}Magaz{{end}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="csrf-token" content="{{.CSRFValue}}">
+  <link rel="stylesheet" href="/static/css/style.css?v=4">
+</head>
+<body>
+
+<!-- ── NAV ────────────────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="container nav__inner">
+    <a href="/" class="nav__logo">🛍 Magaz</a>
+    <div class="nav__links">
+      <a href="/catalog" class="nav__link">Каталог</a>
+      
+      <div class="search-container">
+        <input type="text" id="live-search" class="search-input" placeholder="Поиск товаров...", autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      {{if .User}}
+        {{if .User.IsAdmin}}
+          <a href="/admin" class="nav__link nav__link--admin">Админ</a>
+        {{end}}
+        <a href="/cart" class="nav__link nav__cart" id="nav-cart-btn">
+          🛒
+          {{if gt .CartCount 0}}
+            <span class="cart-badge" id="nav-cart-badge">{{.CartCount}}</span>
+            <span class="cart-total" id="nav-cart-total" style="margin-left: 0.5rem; font-weight: 600; color: var(--c-cyan);">{{printf "%.2f" .CartTotal}} ₽</span>
+          {{end}}
+        </a>
+        <div class="nav__dropdown" id="user-dropdown">
+          <button class="nav__user-btn" id="user-dropdown-btn" type="button">{{.User.Name}} ▾</button>
+          <div class="nav__dropdown-menu">
+            <div class="nav__dropdown-menu-inner">
+              <a href="/account" class="dropdown-item">Профиль</a>
+              <a href="/wishlist" class="dropdown-item">Избранное 💖</a>
+              <a href="/account/orders" class="dropdown-item">Заказы</a>
+              <a href="/account/addresses" class="dropdown-item">Адреса</a>
+              <hr class="dropdown-divider">
+              <form method="POST" action="/auth/logout">
+                {{.CSRF}}
+                <button class="dropdown-item dropdown-item--danger" type="submit">Выйти</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {{else}}
+        <a href="/auth/login" class="btn btn--sm btn--outline">Войти</a>
+        <a href="/auth/register" class="btn btn--sm btn--primary">Регистрация</a>
+      {{end}}
+    </div>
+  </div>
+</nav>
+
+<!-- ── FLASH ──────────────────────────────────────────────────────────────── -->
+{{if .Flash}}
+<div class="flash flash--{{.FlashType}}">
+  <span>{{.Flash}}</span>
+  <button class="flash__close" onclick="this.parentElement.remove()">✕</button>
+</div>
+{{end}}
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<main class="main">
+  {{block "content" .}}{{end}}
+</main>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <p>© 2025 Magaz. Все права защищены.</p>
+  </div>
+</footer>
+
+<!-- ── CART DRAWER ────────────────────────────────────────────────────────── -->
+<div class="cart-overlay" id="cart-overlay"></div>
+<div class="cart-drawer" id="cart-drawer">
+  <div class="cart-drawer__header">
+    <h3>🛒 Ваша корзина</h3>
+    <button class="cart-drawer__close" id="cart-drawer-close">✕</button>
+  </div>
+  <div class="cart-drawer__body" id="cart-drawer-items">
+    <div class="skeleton" style="height: 100px; width: 100%; margin-bottom: 10px; border-radius: var(--radius)"></div>
+    <div class="skeleton" style="height: 100px; width: 100%; margin-bottom: 10px; border-radius: var(--radius)"></div>
+  </div>
+  <div class="cart-drawer__footer">
+    <div class="cart-drawer__total">Итого: <span id="cart-drawer-total">0.00 ₽</span></div>
+    <a href="/cart/checkout" class="btn btn--primary btn--full mt-2">Оформить заказ</a>
+    <a href="/cart" class="btn btn--outline btn--full mt-2">Перейти в корзину</a>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/main.js?v=4"></script>
+</body>
+</html>

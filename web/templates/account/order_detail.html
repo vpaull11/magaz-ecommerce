@@ -1,0 +1,36 @@
+{{define "title"}}Заказ #{{.Data.ID}} — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="account-layout">
+    {{template "account-nav" .}}
+    <div class="account-content">
+      <div class="order-detail-header">
+        <h1 class="page-title">Заказ #{{.Data.ID}}</h1>
+        <span class="status-badge status-badge--{{.Data.Status}}">{{statusLabel .Data.Status}}</span>
+      </div>
+      <p class="text-muted">Создан: {{.Data.CreatedAt.Format "02.01.2006 15:04"}}</p>
+      {{if .Data.PaymentTxID}}<p class="text-muted">Транзакция: {{.Data.PaymentTxID}}</p>{{end}}
+      <div class="card mt-4">
+        <h3 class="card__title">Позиции заказа</h3>
+        <table class="table">
+          <thead><tr><th>Товар</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+          <tbody>
+          {{range .Data.Items}}
+          <tr>
+            <td>{{.ProductName}}</td>
+            <td>{{printf "%.2f" .PriceSnapshot}} ₽</td>
+            <td>{{.Quantity}}</td>
+            <td>{{printf "%.2f" (mulfi .PriceSnapshot .Quantity)}} ₽</td>
+          </tr>
+          {{end}}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3"><strong>Итого</strong></td><td><strong>{{printf "%.2f" .Data.TotalAmount}} ₽</strong></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="mt-4"><a href="/account/orders" class="btn btn--outline">← Все заказы</a></div>
+    </div>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,26 @@
+{{define "title"}}Новый пароль — Magaz{{end}}
+{{define "content"}}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1 class="auth-card__title">Новый пароль</h1>
+    {{with .Data}}
+      {{if .error}}<div class="alert alert--error">{{.error}}</div>{{end}}
+    {{end}}
+    <form method="POST" action="/auth/reset">
+      {{.CSRF}}
+      <input type="hidden" name="token" value="{{with .Data}}{{.token}}{{end}}">
+      <div class="form-group">
+        <label class="form-label" for="password">Новый пароль</label>
+        <input id="password" class="form-input" type="password" name="password"
+               placeholder="Минимум 8 символов" required minlength="8" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password_confirm">Подтвердите пароль</label>
+        <input id="password_confirm" class="form-input" type="password" name="password_confirm"
+               placeholder="Повторите пароль" required minlength="8">
+      </div>
+      <button class="btn btn--primary btn--full mt-4" type="submit">Сохранить пароль</button>
+    </form>
+  </div>
+</div>
+{{end}}

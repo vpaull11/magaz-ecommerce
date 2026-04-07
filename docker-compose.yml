@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: magaz
+      POSTGRES_PASSWORD: magaz
+      POSTGRES_DB: magaz
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magaz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
+      PAYMENT_DB_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
+      PAYMENT_ADDR: ":8081"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
+      PAYMENT_URL: http://payment:8081
+      SERVER_ADDR: ":8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      payment:
+        condition: service_started
+
+volumes:
+  pgdata:
+  uploads:

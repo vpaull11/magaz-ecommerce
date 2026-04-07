@@ -1,0 +1,31 @@
+{{define "title"}}Пользователи — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <h1 class="page-title">Пользователи ({{.Data.Total}})</h1>
+      <table class="table">
+        <thead><tr><th>#</th><th>Email</th><th>Имя</th><th>Роль</th><th>Дата регистрации</th></tr></thead>
+        <tbody>
+        {{range .Data.Users}}
+        <tr>
+          <td>{{.ID}}</td>
+          <td>{{.Email}}</td>
+          <td>{{.Name}}</td>
+          <td>
+            {{if eq (string .Role) "admin"}}
+              <span class="badge badge--blue">Админ</span>
+            {{else}}
+              <span class="badge">Пользователь</span>
+            {{end}}
+          </td>
+          <td>{{.CreatedAt.Format "02.01.2006"}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}

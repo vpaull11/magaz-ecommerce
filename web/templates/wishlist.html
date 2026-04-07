@@ -1,0 +1,37 @@
+{{define "title"}}Избранное — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <h1 class="page-title">Ваше избранное 💖</h1>
+  {{if .Data.Products}}
+  <div class="product-grid">
+    {{range .Data.Products}}
+    <div class="product-card tilt-card">
+      <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+        {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
+        {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
+      </a>
+      <div class="product-card__body">
+        <a href="/catalog/{{.ID}}" class="product-card__name">{{.Name}}</a>
+        <div class="product-card__price">{{printf "%.2f" .Price}} ₽</div>
+        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+          <form method="POST" action="/cart/add" style="flex:1">
+            <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFValue}}">
+            <input type="hidden" name="product_id" value="{{.ID}}">
+            <input type="hidden" name="quantity" value="1">
+            <button class="btn btn--primary btn--full" style="padding: 0.5rem 1rem">В корзину</button>
+          </form>
+          <button class="btn-wishlist active" data-product-id="{{.ID}}" title="Убрать из избранного" style="margin:0; width:44px;">×</button>
+        </div>
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <div class="empty-state__icon">💫</div>
+    <p class="empty-state__text">У вас пока нет избранных товаров</p>
+    <a href="/catalog" class="btn btn--primary mt-4">В каталог</a>
+  </div>
+  {{end}}
+</div>
+{{end}}

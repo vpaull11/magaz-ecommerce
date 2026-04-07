@@ -1,0 +1,38 @@
+{{define "title"}}Регистрация — Magaz{{end}}
+{{define "content"}}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1 class="auth-card__title">Создать аккаунт</h1>
+    {{with .Data}}
+      {{if .error}}<div class="alert alert--error">{{.error}}</div>{{end}}
+    {{end}}
+    <form method="POST" action="/auth/register" novalidate>
+      {{.CSRF}}
+      <div class="form-group">
+        <label class="form-label" for="name">Имя</label>
+        <input id="name" class="form-input" type="text" name="name"
+               value="{{with .Data}}{{.name}}{{end}}"
+               placeholder="Иван Иванов" required minlength="2" maxlength="100" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input id="email" class="form-input" type="email" name="email"
+               value="{{with .Data}}{{.email}}{{end}}"
+               placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Пароль</label>
+        <input id="password" class="form-input" type="password" name="password"
+               placeholder="Минимум 8 символов" required minlength="8">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password_confirm">Подтвердите пароль</label>
+        <input id="password_confirm" class="form-input" type="password" name="password_confirm"
+               placeholder="Повторите пароль" required minlength="8">
+      </div>
+      <button class="btn btn--primary btn--full mt-4" type="submit">Зарегистрироваться</button>
+    </form>
+    <p class="auth-card__footer">Уже есть аккаунт? <a href="/auth/login">Войти</a></p>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,147 @@
+package repository
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+
+	"magaz/internal/models"
+)
+
+type ProductRepository struct{ db *sql.DB }
+
+func NewProductRepository(db *sql.DB) *ProductRepository { return &ProductRepository{db: db} }
+
+const productSelectSQL = `
+	SELECT p.id, p.name, p.description, p.price, p.stock,
+	       p.image_url, p.category_id, COALESCE(c.name,'') as category_name,
+	       p.is_active, p.rating_avg, p.review_count,
+	       p.created_at, p.updated_at
+	FROM products p
+	LEFT JOIN categories c ON c.id = p.category_id`
+
+func scanProduct(row interface{ Scan(...any) error }) (*models.Product, error) {
+	p := &models.Product{}
+	return p, row.Scan(
+		&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock,
+		&p.ImageURL, &p.CategoryID, &p.CategoryName,
+		&p.IsActive, &p.RatingAvg, &p.ReviewCount,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+}
+
+func (r *ProductRepository) List(categorySlug string, limit, offset int) ([]*models.Product, int, error) {
+	var (
+		args  []any
+		where string
+	)
+	if categorySlug != "" {
+		where = " WHERE p.is_active = TRUE AND c.slug = $1"
+		args = []any{categorySlug, limit, offset}
+	} else {
+		where = " WHERE p.is_active = TRUE"
+		args = []any{limit, offset}
+	}
+
+	// count
+	countSQL := "SELECT COUNT(*) FROM products p LEFT JOIN categories c ON c.id = p.category_id" + where
+	countArgs := args[:len(args)-2]
+	var total int
+	if err := r.db.QueryRow(countSQL, countArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// offsetIdx
+	offsetArg := len(args) - 1
+	limitArg := len(args) - 2
+	query := productSelectSQL + where +
+		fmt.Sprintf(" ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d", limitArg+1, offsetArg+1)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var products []*models.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		products = append(products, p)
+	}
+	return products, total, rows.Err()
+}
+
+func (r *ProductRepository) ListAll(limit, offset int) ([]*models.Product, int, error) {
+	var total int
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM products`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.db.Query(
+		productSelectSQL+` ORDER BY p.created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var products []*models.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		products = append(products, p)
+	}
+	return products, total, rows.Err()
+}
+
+func (r *ProductRepository) FindByID(id int64) (*models.Product, error) {
+	p, err := scanProduct(r.db.QueryRow(productSelectSQL+" WHERE p.id = $1", id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return p, err
+}
+
+func (r *ProductRepository) Create(p *models.Product) error {
+	return r.db.QueryRow(
+		`INSERT INTO products (name, description, price, stock, image_url, category_id, is_active)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 RETURNING id, created_at, updated_at`,
+		p.Name, p.Description, p.Price, p.Stock, p.ImageURL, p.CategoryID, p.IsActive,
+	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
+}
+
+func (r *ProductRepository) Update(p *models.Product) error {
+	_, err := r.db.Exec(
+		`UPDATE products SET name=$1, description=$2, price=$3, stock=$4,
+		 image_url=$5, category_id=$6, is_active=$7, updated_at=NOW()
+		 WHERE id=$8`,
+		p.Name, p.Description, p.Price, p.Stock,
+		p.ImageURL, p.CategoryID, p.IsActive, p.ID,
+	)
+	return err
+}
+
+func (r *ProductRepository) Delete(id int64) error {
+	_, err := r.db.Exec(`UPDATE products SET is_active=FALSE WHERE id=$1`, id)
+	return err
+}
+
+func (r *ProductRepository) DecrementStock(tx *sql.Tx, productID int64, qty int) error {
+	res, err := tx.Exec(
+		`UPDATE products SET stock = stock - $1
+		 WHERE id = $2 AND stock >= $1`,
+		qty, productID,
+	)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("недостаточно товара на складе (id=%d)", productID)
+	}
+	return nil
+}
