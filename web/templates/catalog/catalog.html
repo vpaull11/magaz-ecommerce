@@ -10,12 +10,53 @@
         <li><a href="/catalog?category={{.Slug}}" class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">{{.Name}}</a></li>
         {{end}}
       </ul>
+
+      {{if .Data.AttrDefs}}
+      <!-- Filter form — submits as GET -->
+      <form method="GET" action="/catalog" id="filter-form" style="margin-top:1.5rem">
+        <input type="hidden" name="category" value="{{.Data.ActiveCategory}}">
+        <input type="hidden" name="sort" value="{{.Data.SortBy}}">
+
+        <h3 class="sidebar__title" style="margin-top:0">Фильтры</h3>
+        {{range .Data.AttrDefs}}
+        <div style="margin-bottom:1rem">
+          <label class="form-label" style="font-size:0.8rem;margin-bottom:0.3rem">{{.Name}}</label>
+          {{if eq .ValueType "number"}}
+            <input class="form-input" style="padding:0.35rem 0.5rem;font-size:0.85rem"
+                   type="text" name="attr_{{.ID}}"
+                   placeholder="мин:макс"
+                   value="{{index $.Data.AttrFilters .ID}}">
+          {{else}}
+            <input class="form-input" style="padding:0.35rem 0.5rem;font-size:0.85rem"
+                   type="text" name="attr_{{.ID}}"
+                   placeholder="любое значение"
+                   value="{{index $.Data.AttrFilters .ID}}">
+          {{end}}
+        </div>
+        {{end}}
+        <button class="btn btn--primary btn--sm" type="submit" style="width:100%">Применить</button>
+        <a href="/catalog?category={{.Data.ActiveCategory}}" class="btn btn--outline btn--sm" style="width:100%;margin-top:0.5rem;text-align:center;display:block">Сбросить</a>
+      </form>
+      {{end}}
     </aside>
+
     <div class="catalog-main">
       <div class="catalog-header">
         <h1 class="page-title">Каталог</h1>
-        <span class="catalog-count">{{.Data.Total}} товаров</span>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span class="catalog-count">{{.Data.Total}} товаров</span>
+          <!-- Sort buttons -->
+          <div style="display:flex;gap:0.5rem">
+            <a href="/catalog?category={{.Data.ActiveCategory}}&sort=price_asc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
+               class="btn btn--sm {{if eq .Data.SortBy "price_asc"}}btn--primary{{else}}btn--outline{{end}}"
+               title="Сначала дешевле">↑ Цена</a>
+            <a href="/catalog?category={{.Data.ActiveCategory}}&sort=price_desc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
+               class="btn btn--sm {{if eq .Data.SortBy "price_desc"}}btn--primary{{else}}btn--outline{{end}}"
+               title="Сначала дороже">↓ Цена</a>
+          </div>
+        </div>
       </div>
+
       <div class="product-grid">
         {{range .Data.Products}}
         <div class="product-card tilt-card">
@@ -35,11 +76,12 @@
         </div>
         {{else}}<div class="empty-state"><p>Товары не найдены</p></div>{{end}}
       </div>
+
       {{if gt .Data.TotalPages 1}}
       <div class="pagination">
-        {{$cat := .Data.ActiveCategory}}
+        {{$cat := .Data.ActiveCategory}}{{$sort := .Data.SortBy}}
         {{range seq 1 .Data.TotalPages}}
-        <a href="/catalog?category={{$cat}}&page={{.}}"
+        <a href="/catalog?category={{$cat}}&sort={{$sort}}&page={{.}}"
            class="pagination__btn {{if eq . $.Data.Page}}pagination__btn--active{{end}}">{{.}}</a>
         {{end}}
       </div>

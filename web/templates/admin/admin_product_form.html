@@ -57,6 +57,25 @@
                    {{if .Data.Product}}{{if .Data.Product.IsActive}}checked{{end}}{{else}}checked{{end}}>
             <label for="is_active">Активен (отображается в каталоге)</label>
           </div>
+
+          {{if .Data.AttrDefs}}
+          <div class="card mt-4" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);padding:1.5rem">
+            <h3 style="margin-top:0;margin-bottom:1rem;color:var(--c-cyan);font-size:1rem">Характеристики товара</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem">
+            {{range .Data.AttrDefs}}
+              <div class="form-group" style="margin:0">
+                <label class="form-label">{{.Name}}{{if eq .ValueType "number"}} <span style="color:var(--c-muted);font-size:0.75rem">(число)</span>{{end}}</label>
+                <input class="form-input" 
+                       name="attr_{{.ID}}"
+                       type="{{if eq .ValueType "number"}}number{{else}}text{{end}}"
+                       step="{{if eq .ValueType "number"}}any{{else}}{{end}}"
+                       value="{{index $.Data.AttrValueMap .ID}}">
+              </div>
+            {{end}}
+            </div>
+          </div>
+          {{end}}
+
           <div class="form-actions mt-4">
             <button class="btn btn--primary" type="submit">Сохранить</button>
             <a href="/admin/products" class="btn btn--outline">Отмена</a>
@@ -67,3 +86,4 @@
   </div>
 </div>
 {{end}}
+

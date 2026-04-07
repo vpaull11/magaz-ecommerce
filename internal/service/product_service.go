@@ -22,9 +22,11 @@ func NewProductService(
 }
 
 type ProductFilter struct {
-	Category string
-	Page     int
-	PerPage  int
+	Category    string
+	Page        int
+	PerPage     int
+	SortBy      string            // "price_asc" | "price_desc" | "" (default)
+	AttrFilters map[int64]string  // attrDefID -> value (string or "min:max")
 }
 
 type ProductPage struct {
@@ -44,7 +46,7 @@ func (s *ProductService) List(f ProductFilter) (*ProductPage, error) {
 	}
 	offset := (f.Page - 1) * f.PerPage
 
-	products, total, err := s.products.List(f.Category, f.PerPage, offset)
+	products, total, err := s.products.List(f.Category, f.PerPage, offset, f.SortBy, f.AttrFilters)
 	if err != nil {
 		return nil, err
 	}

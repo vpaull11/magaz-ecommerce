@@ -1,0 +1,78 @@
+{{define "title"}}Атрибуты категории «{{.Data.Category.Name}}» — Админ{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="admin-layout">
+    {{template "admin-nav" .}}
+    <div class="admin-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div>
+          <a href="/admin/categories" style="color:var(--c-muted);font-size:0.9rem">← Категории</a>
+          <h1 class="page-title" style="margin:0.25rem 0 0">Атрибуты: {{.Data.Category.Name}}</h1>
+        </div>
+        <button class="btn btn--primary btn--sm" onclick="document.getElementById('modal-new-attr').style.display='flex'">+ Новый атрибут</button>
+      </div>
+
+      <div class="card">
+        {{if .Data.Defs}}
+        <table class="table">
+          <thead><tr><th>Название</th><th>Slug</th><th>Тип</th><th>Порядок</th><th></th></tr></thead>
+          <tbody>
+          {{range .Data.Defs}}
+          <tr>
+            <td><strong>{{.Name}}</strong></td>
+            <td><code style="font-size:0.8rem;opacity:0.7">{{.Slug}}</code></td>
+            <td>
+              {{if eq .ValueType "number"}}
+                <span class="status-badge" style="background:rgba(56,189,248,0.15);color:#38bdf8">Число</span>
+              {{else}}
+                <span class="status-badge" style="background:rgba(167,139,250,0.15);color:#a78bfa">Строка</span>
+              {{end}}
+            </td>
+            <td>{{.SortOrder}}</td>
+            <td>
+              <form method="POST" action="/admin/attrs/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Удалить атрибут и все его значения?')">
+                {{$.CSRF}}
+                <button class="btn btn--sm btn--danger" type="submit">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+          </tbody>
+        </table>
+        {{else}}
+          <p style="color:var(--c-muted);text-align:center;padding:2rem">Атрибуты не добавлены. Нажмите «+ Новый атрибут».</p>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Attr -->
+<div id="modal-new-attr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div class="card" style="width:400px;max-width:90vw;padding:2rem">
+    <h3 style="margin-top:0">Новый атрибут</h3>
+    <form method="POST" action="/admin/categories/{{.Data.Category.ID}}/attrs/new">
+      {{.CSRF}}
+      <div class="form-group">
+        <label class="form-label">Название *</label>
+        <input class="form-input" name="name" required maxlength="255" placeholder="Цвет, Диагональ...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тип значения *</label>
+        <select class="form-input" name="value_type">
+          <option value="string">Строковый (текст, цвет...)</option>
+          <option value="number">Числовой (размер, вес...)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Порядок сортировки</label>
+        <input class="form-input" type="number" name="sort_order" value="0">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Создать</button>
+        <button class="btn btn--outline" type="button" onclick="document.getElementById('modal-new-attr').style.display='none'">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

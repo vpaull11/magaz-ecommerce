@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ─── Roles ───────────────────────────────────────────────────────────────────
 
@@ -57,27 +60,61 @@ func (u *User) IsAdmin() bool { return u.Role == RoleAdmin }
 // ─── Category ────────────────────────────────────────────────────────────────
 
 type Category struct {
-	ID   int64  `db:"id"`
-	Name string `db:"name"`
-	Slug string `db:"slug"`
+	ID        int64      `db:"id"`
+	Name      string     `db:"name"`
+	Slug      string     `db:"slug"`
+	ParentID  *int64     `db:"parent_id"`
+	SortOrder int        `db:"sort_order"`
+	Children  []*Category `db:"-"`  // populated in-memory
+}
+
+// ─── Attributes ───────────────────────────────────────────────────────────────
+
+type AttrDef struct {
+	ID         int64  `db:"id"`
+	CategoryID int64  `db:"category_id"`
+	Name       string `db:"name"`
+	Slug       string `db:"slug"`
+	ValueType  string `db:"value_type"` // "string" | "number"
+	SortOrder  int    `db:"sort_order"`
+}
+
+type AttrValue struct {
+	ID         int64    `db:"id"`
+	ProductID  int64    `db:"product_id"`
+	AttrDefID  int64    `db:"attr_def_id"`
+	ValueStr   *string  `db:"value_str"`
+	ValueNum   *float64 `db:"value_num"`
+	Def        *AttrDef `db:"-"`
+}
+
+func (av *AttrValue) DisplayValue() string {
+	if av.ValueStr != nil {
+		return *av.ValueStr
+	}
+	if av.ValueNum != nil {
+		return fmt.Sprintf("%g", *av.ValueNum)
+	}
+	return ""
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 type Product struct {
-	ID           int64     `db:"id" json:"id"`
-	Name         string    `db:"name" json:"name"`
-	Description  string    `db:"description" json:"description"`
-	Price        float64   `db:"price" json:"price"`
-	Stock        int       `db:"stock" json:"stock"`
-	ImageURL     string    `db:"image_url" json:"image_url"`
-	CategoryID   int64     `db:"category_id" json:"category_id"`
-	CategoryName string    `db:"category_name" db_ignore:"true" json:"category_name,omitempty"`
-	IsActive     bool      `db:"is_active" json:"is_active"`
-	RatingAvg    float64   `db:"rating_avg" json:"rating_avg"`
-	ReviewCount  int       `db:"review_count" json:"review_count"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+	ID           int64      `db:"id" json:"id"`
+	Name         string     `db:"name" json:"name"`
+	Description  string     `db:"description" json:"description"`
+	Price        float64    `db:"price" json:"price"`
+	Stock        int        `db:"stock" json:"stock"`
+	ImageURL     string     `db:"image_url" json:"image_url"`
+	CategoryID   int64      `db:"category_id" json:"category_id"`
+	CategoryName string     `db:"category_name" db_ignore:"true" json:"category_name,omitempty"`
+	IsActive     bool       `db:"is_active" json:"is_active"`
+	RatingAvg    float64    `db:"rating_avg" json:"rating_avg"`
+	ReviewCount  int        `db:"review_count" json:"review_count"`
+	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time  `db:"updated_at" json:"updated_at"`
+	Attrs        []AttrValue `db:"-" json:"attrs,omitempty"`
 }
 
 // ─── Address ─────────────────────────────────────────────────────────────────

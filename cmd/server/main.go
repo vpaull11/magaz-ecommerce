@@ -49,11 +49,13 @@ func main() {
 	addressRepo  := repository.NewAddressRepository(database)
 	wishlistRepo := repository.NewWishlistRepository(database)
 	reviewRepo   := repository.NewReviewRepository(database)
+	attrRepo     := repository.NewAttrRepository(database)
 
 	// ─── Services ──────────────────────────────────────────────────────────
 	authSvc    := service.NewAuthService(userRepo)
 	productSvc := service.NewProductService(productRepo, categoryRepo)
 	cartSvc    := service.NewCartService(cartRepo, productRepo)
+	catSvc     := service.NewCategoryService(categoryRepo, attrRepo)
 	payClient  := service.NewPaymentClient(cfg.PaymentURL, cfg.PaymentSecret)
 	orderSvc   := service.NewOrderService(orderRepo, productRepo, cartRepo, addressRepo, payClient, database)
 
@@ -77,13 +79,13 @@ func main() {
 
 	// ─── Handlers ──────────────────────────────────────────────────────────
 	authH     := handler.NewAuthHandler(base, authSvc)
-	catalogH  := handler.NewCatalogHandler(base, productSvc)
+	catalogH  := handler.NewCatalogHandler(base, productSvc, catSvc, categoryRepo)
 	wishlistH := handler.NewWishlistHandler(base, wishlistRepo)
 	reviewH   := handler.NewReviewHandler(base, reviewRepo)
 	cartH     := handler.NewCartHandler(base, cartSvc, addressRepo)
 	accountH  := handler.NewAccountHandler(base, authSvc, orderSvc, addressRepo)
 	checkoutH := handler.NewOrderCheckoutHandler(base, orderSvc, addressRepo, cartSvc)
-	adminH    := handler.NewAdminHandler(base, productSvc, orderSvc, userRepo, cfg.UploadsDir)
+	adminH    := handler.NewAdminHandler(base, productSvc, orderSvc, userRepo, catSvc, attrRepo, cfg.UploadsDir)
 
 	// ─── Rate limiters ─────────────────────────────────────────────────────
 	// globalLimiter: 300 req/min per IP — blocks floods across all routes
@@ -187,9 +189,18 @@ func main() {
 		r.Get("/admin/products/edit", adminH.EditProductPage)
 		r.Post("/admin/products/edit", adminH.UpdateProduct)
 		r.Post("/admin/products/delete", adminH.DeleteProduct)
+		r.Post("/admin/products/{id}/attrs", adminH.SaveProductAttrs)
 		r.Get("/admin/orders", adminH.Orders)
 		r.Post("/admin/orders/status", adminH.UpdateOrderStatus)
 		r.Get("/admin/users", adminH.Users)
+		// Categories
+		r.Get("/admin/categories", adminH.Categories)
+		r.Post("/admin/categories/new", adminH.CreateCategory)
+		r.Post("/admin/categories/{id}/edit", adminH.UpdateCategory)
+		r.Post("/admin/categories/{id}/delete", adminH.DeleteCategory)
+		r.Get("/admin/categories/{id}/attrs", adminH.CategoryAttrs)
+		r.Post("/admin/categories/{id}/attrs/new", adminH.CreateAttrDef)
+		r.Post("/admin/attrs/{id}/delete", adminH.DeleteAttrDef)
 	})
 
 	// ─── HTTP Server ────────────────────────────────────────────────────────

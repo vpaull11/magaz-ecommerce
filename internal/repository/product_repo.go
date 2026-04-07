@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"magaz/internal/models"
 )
@@ -30,7 +31,7 @@ func scanProduct(row interface{ Scan(...any) error }) (*models.Product, error) {
 	)
 }
 
-func (r *ProductRepository) List(categorySlug string, limit, offset int) ([]*models.Product, int, error) {
+func (r *ProductRepository) List(categorySlug string, limit, offset int, sortBy string, attrFilters map[int64]string) ([]*models.Product, int, error) {
 	var (
 		args  []any
 		where string
@@ -43,6 +44,40 @@ func (r *ProductRepository) List(categorySlug string, limit, offset int) ([]*mod
 		args = []any{limit, offset}
 	}
 
+	// Attribute filter — narrow by product IDs
+	if len(attrFilters) > 0 {
+		// Build intersect subquery inline
+		var parts []string
+		argIdx := len(args) - 1 // after existing args (before limit/offset)
+		// We need to insert ID filter before limit/offset args
+		limitVal := args[len(args)-2]
+		offsetVal := args[len(args)-1]
+		args = args[:len(args)-2]
+		argIdx = len(args)
+
+		for defID, val := range attrFilters {
+			argIdx++
+			argIdx2 := argIdx + 1
+			if len(val) > 0 && strings.Contains(val, ":") {
+				parts2 := strings.SplitN(val, ":", 2)
+				parts = append(parts, fmt.Sprintf(
+					"SELECT product_id FROM attr_values WHERE attr_def_id=$%d AND value_num BETWEEN $%d AND $%d",
+					argIdx, argIdx2, argIdx2+1))
+				args = append(args, defID, parts2[0], parts2[1])
+				argIdx += 2
+			} else {
+				parts = append(parts, fmt.Sprintf(
+					"SELECT product_id FROM attr_values WHERE attr_def_id=$%d AND value_str=$%d",
+					argIdx, argIdx2))
+				args = append(args, defID, val)
+				argIdx++
+			}
+		}
+		idSubq := strings.Join(parts, " INTERSECT ")
+		where += fmt.Sprintf(" AND p.id IN (%s)", idSubq)
+		args = append(args, limitVal, offsetVal)
+	}
+
 	// count
 	countSQL := "SELECT COUNT(*) FROM products p LEFT JOIN categories c ON c.id = p.category_id" + where
 	countArgs := args[:len(args)-2]
@@ -51,11 +86,19 @@ func (r *ProductRepository) List(categorySlug string, limit, offset int) ([]*mod
 		return nil, 0, err
 	}
 
-	// offsetIdx
-	offsetArg := len(args) - 1
+	// order
+	orderClause := " ORDER BY p.created_at DESC"
+	switch sortBy {
+	case "price_asc":
+		orderClause = " ORDER BY p.price ASC"
+	case "price_desc":
+		orderClause = " ORDER BY p.price DESC"
+	}
+
 	limitArg := len(args) - 2
-	query := productSelectSQL + where +
-		fmt.Sprintf(" ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d", limitArg+1, offsetArg+1)
+	offsetArg := len(args) - 1
+	query := productSelectSQL + where + orderClause +
+		fmt.Sprintf(" LIMIT $%d OFFSET $%d", limitArg+1, offsetArg+1)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -72,6 +115,7 @@ func (r *ProductRepository) List(categorySlug string, limit, offset int) ([]*mod
 	}
 	return products, total, rows.Err()
 }
+
 
 func (r *ProductRepository) ListAll(limit, offset int) ([]*models.Product, int, error) {
 	var total int

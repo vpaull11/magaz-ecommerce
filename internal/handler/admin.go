@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"magaz/internal/middleware"
 	"magaz/internal/models"
 	"magaz/internal/repository"
@@ -83,6 +84,8 @@ type AdminHandler struct {
 	productSvc *service.ProductService
 	orderSvc   *service.OrderService
 	userRepo   *repository.UserRepository
+	catSvc     *service.CategoryService
+	attrRepo   *repository.AttrRepository
 	uploadsDir string
 }
 
@@ -91,6 +94,8 @@ func NewAdminHandler(
 	productSvc *service.ProductService,
 	orderSvc *service.OrderService,
 	userRepo *repository.UserRepository,
+	catSvc *service.CategoryService,
+	attrRepo *repository.AttrRepository,
 	uploadsDir string,
 ) *AdminHandler {
 	return &AdminHandler{
@@ -98,9 +103,135 @@ func NewAdminHandler(
 		productSvc: productSvc,
 		orderSvc:   orderSvc,
 		userRepo:   userRepo,
+		catSvc:     catSvc,
+		attrRepo:   attrRepo,
 		uploadsDir: uploadsDir,
 	}
 }
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+// GET /admin/categories
+func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
+	flat, _ := h.catSvc.GetFlat()
+	// Build parent name map
+	parentNames := make(map[int64]string)
+	byID := make(map[int64]string)
+	for _, c := range flat {
+		byID[c.ID] = c.Name
+	}
+	for _, c := range flat {
+		if c.ParentID != nil {
+			parentNames[c.ID] = byID[*c.ParentID]
+		} else {
+			parentNames[c.ID] = "—"
+		}
+	}
+	errMsg := r.URL.Query().Get("err")
+	h.Render(w, r, "admin_categories.html", map[string]any{
+		"Flat":        flat,
+		"ParentNames": parentNames,
+		"Error":       errMsg,
+	})
+}
+
+// POST /admin/categories/new
+func (h *AdminHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimSpace(r.FormValue("name"))
+	slug := strings.TrimSpace(r.FormValue("slug"))
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	var parentID *int64
+	if pid, err := strconv.ParseInt(r.FormValue("parent_id"), 10, 64); err == nil && pid > 0 {
+		parentID = &pid
+	}
+	if _, err := h.catSvc.Create(name, slug, parentID, sortOrder); err != nil {
+		http.Redirect(w, r, "/admin/categories?err="+err.Error(), http.StatusFound)
+		return
+	}
+	h.Flash(w, r, "Категория создана", "success")
+	http.Redirect(w, r, "/admin/categories", http.StatusFound)
+}
+
+// POST /admin/categories/{id}/edit
+func (h *AdminHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	name := strings.TrimSpace(r.FormValue("name"))
+	slug := strings.TrimSpace(r.FormValue("slug"))
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	var parentID *int64
+	if pid, err := strconv.ParseInt(r.FormValue("parent_id"), 10, 64); err == nil && pid > 0 {
+		parentID = &pid
+	}
+	if err := h.catSvc.Update(id, name, slug, parentID, sortOrder); err != nil {
+		h.Flash(w, r, err.Error(), "error")
+	} else {
+		h.Flash(w, r, "Категория обновлена", "success")
+	}
+	http.Redirect(w, r, "/admin/categories", http.StatusFound)
+}
+
+// POST /admin/categories/{id}/delete
+func (h *AdminHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err := h.catSvc.Delete(id); err != nil {
+		h.Flash(w, r, err.Error(), "error")
+	} else {
+		h.Flash(w, r, "Категория удалена", "success")
+	}
+	http.Redirect(w, r, "/admin/categories", http.StatusFound)
+}
+
+// ─── Attribute Definitions ────────────────────────────────────────────────────
+
+// GET /admin/categories/{id}/attrs
+func (h *AdminHandler) CategoryAttrs(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	cat, err := h.catSvc.FindByID(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defs, _ := h.catSvc.ListDefs(id)
+	h.Render(w, r, "admin_attrs.html", map[string]any{
+		"Category": cat,
+		"Defs":     defs,
+	})
+}
+
+// POST /admin/categories/{id}/attrs/new
+func (h *AdminHandler) CreateAttrDef(w http.ResponseWriter, r *http.Request) {
+	catID, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	name := strings.TrimSpace(r.FormValue("name"))
+	valueType := r.FormValue("value_type")
+	if valueType != "number" {
+		valueType = "string"
+	}
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	if _, err := h.catSvc.CreateDef(catID, name, valueType, sortOrder); err != nil {
+		h.Flash(w, r, err.Error(), "error")
+	} else {
+		h.Flash(w, r, "Атрибут добавлен", "success")
+	}
+	http.Redirect(w, r, fmt.Sprintf("/admin/categories/%d/attrs", catID), http.StatusFound)
+}
+
+// POST /admin/attrs/{id}/delete
+func (h *AdminHandler) DeleteAttrDef(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	def, _ := h.attrRepo.FindDef(id)
+	_ = h.catSvc.DeleteDef(id)
+	h.Flash(w, r, "Атрибут удалён", "success")
+	redirectID := int64(0)
+	if def != nil {
+		redirectID = def.CategoryID
+	}
+	if redirectID > 0 {
+		http.Redirect(w, r, fmt.Sprintf("/admin/categories/%d/attrs", redirectID), http.StatusFound)
+	} else {
+		http.Redirect(w, r, "/admin/categories", http.StatusFound)
+	}
+}
+
 
 // GET /admin
 func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +253,12 @@ func (h *AdminHandler) Products(w http.ResponseWriter, r *http.Request) {
 // GET /admin/products/new
 func (h *AdminHandler) NewProductPage(w http.ResponseWriter, r *http.Request) {
 	cats, _ := h.productSvc.Categories()
-	h.Render(w, r, "admin_product_form.html", map[string]any{"Categories": cats, "Product": nil})
+	h.Render(w, r, "admin_product_form.html", map[string]any{
+		"Categories":   cats,
+		"Product":      nil,
+		"AttrDefs":     nil,
+		"AttrValueMap": map[int64]string{},
+	})
 }
 
 // POST /admin/products/new
@@ -135,10 +271,16 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in := h.formToProductInput(r)
-	if _, err := h.productSvc.Create(in, imageURL); err != nil {
-		h.Flash(w, r, err.Error(), "error")
+	p, err2 := h.productSvc.Create(in, imageURL)
+	if err2 != nil {
+		h.Flash(w, r, err2.Error(), "error")
 		http.Redirect(w, r, "/admin/products/new", http.StatusFound)
 		return
+	}
+	// Save attribute values
+	attrVals := extractAttrValues(r)
+	if len(attrVals) > 0 {
+		_ = h.catSvc.SaveProductAttrs(p.ID, attrVals)
 	}
 	h.Flash(w, r, "Товар создан", "success")
 	http.Redirect(w, r, "/admin/products", http.StatusFound)
@@ -153,7 +295,20 @@ func (h *AdminHandler) EditProductPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cats, _ := h.productSvc.Categories()
-	h.Render(w, r, "admin_product_form.html", map[string]any{"Categories": cats, "Product": p})
+	// Load attr defs for the product's category
+	attrDefs, _ := h.catSvc.ListDefs(p.CategoryID)
+	// Load existing attr values and build a map defID -> display value
+	attrValues, _ := h.catSvc.GetValuesForProduct(id)
+	attrValueMap := make(map[int64]string)
+	for _, av := range attrValues {
+		attrValueMap[av.AttrDefID] = av.DisplayValue()
+	}
+	h.Render(w, r, "admin_product_form.html", map[string]any{
+		"Categories":   cats,
+		"Product":      p,
+		"AttrDefs":     attrDefs,
+		"AttrValueMap": attrValueMap,
+	})
 }
 
 // POST /admin/products/{id}/edit
@@ -169,9 +324,23 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	if err := h.productSvc.Update(id, in, imageURL); err != nil {
 		h.Flash(w, r, err.Error(), "error")
 	} else {
+		// Save attribute values
+		attrVals := extractAttrValues(r)
+		if len(attrVals) > 0 {
+			_ = h.catSvc.SaveProductAttrs(id, attrVals)
+		}
 		h.Flash(w, r, "Товар обновлён", "success")
 	}
 	http.Redirect(w, r, "/admin/products", http.StatusFound)
+}
+
+// POST /admin/products/{id}/attrs
+func (h *AdminHandler) SaveProductAttrs(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	attrVals := extractAttrValues(r)
+	_ = h.catSvc.SaveProductAttrs(id, attrVals)
+	h.Flash(w, r, "Характеристики сохранены", "success")
+	http.Redirect(w, r, fmt.Sprintf("/admin/products/edit?id=%d", id), http.StatusFound)
 }
 
 // POST /admin/products/{id}/delete
@@ -242,6 +411,17 @@ func (h *AdminHandler) formToProductInput(r *http.Request) service.ProductInput 
 		CategoryID:  catID,
 		IsActive:    r.FormValue("is_active") == "on",
 	}
+}
+
+// extractAttrValues pulls all form fields named "attr_<id>" and returns them as a map.
+func extractAttrValues(r *http.Request) map[string]string {
+	result := make(map[string]string)
+	for key, vals := range r.Form {
+		if strings.HasPrefix(key, "attr_") && len(vals) > 0 {
+			result[strings.TrimPrefix(key, "attr_")] = vals[0]
+		}
+	}
+	return result
 }
 
 func (h *AdminHandler) handleImageUpload(r *http.Request) (string, error) {
