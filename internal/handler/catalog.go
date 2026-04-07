@@ -35,11 +35,16 @@ func (h *CatalogHandler) Index(w http.ResponseWriter, r *http.Request) {
 	h.Render(w, r, "index.html", page)
 }
 
-// GET /catalog
+// GET /catalog, /catalog/{slug}, /catalog/{slug}/{page}
 func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
-	catSlug := r.URL.Query().Get("category")
-	pageNum, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	sortBy := r.URL.Query().Get("sort") // "price_asc" | "price_desc"
+	// Slug comes from URL path param OR query-param fallback (not used in new URLs)
+	catSlug := chi.URLParam(r, "slug")
+	// Page: from path param {page} or query param for sort/filter links
+	pageNum, _ := strconv.Atoi(chi.URLParam(r, "page"))
+	if pageNum == 0 {
+		pageNum, _ = strconv.Atoi(r.URL.Query().Get("page"))
+	}
+	sortBy := r.URL.Query().Get("sort") // stays in query: ?sort=price_asc
 
 	// Parse attr filters: ?attr_42=красный&attr_10=5:10
 	attrFilters := make(map[int64]string)
@@ -101,8 +106,7 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
-// GET /catalog/{id}
+// GET /catalog/item/{id}
 func (h *CatalogHandler) Product(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
@@ -161,4 +165,9 @@ func containsIgnoreCase(s, substr string) bool {
 func chttpJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
+}
+// GET /catalog/{id:[0-9]+} — 301 redirect to /catalog/item/{id}
+func (h *CatalogHandler) ProductRedirect(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	http.Redirect(w, r, "/catalog/item/"+id, http.StatusMovedPermanently)
 }

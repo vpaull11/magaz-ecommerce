@@ -16,12 +16,12 @@
     <div class="product-grid">
       {{range .Data.Products}}
       <div class="product-card tilt-card">
-        <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+        <a href="/catalog/item/{{.ID}}" class="product-card__img-wrap skeleton">
           {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
           {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
         </a>
         <div class="product-card__body">
-          <h3 class="product-card__name"><a href="/catalog/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
+          <h3 class="product-card__name"><a href="/catalog/item/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
           <p class="product-card__cat">{{.CategoryName}}</p>
           <div class="product-card__footer">
             <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>

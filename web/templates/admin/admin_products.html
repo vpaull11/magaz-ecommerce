@@ -14,7 +14,7 @@
         {{range .Data.Products}}
         <tr>
           <td>{{.ID}}</td>
-          <td><a href="/catalog/{{.ID}}">{{.Name}}</a></td>
+          <td><a href="/catalog/item/{{.ID}}">{{.Name}}</a></td>
           <td>{{.CategoryName}}</td>
           <td>{{printf "%.2f" .Price}} ₽</td>
           <td>{{.Stock}}</td>

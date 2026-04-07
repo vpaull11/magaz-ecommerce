@@ -15,7 +15,7 @@
           {{if .Children}}
           <!-- Parent category with children — expandable -->
           <div class="sidebar__group">
-            <a href="/catalog?category={{.Slug}}"
+            <a href="/catalog/{{.Slug}}"
                class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
               {{.Name}}
             </a>
@@ -25,7 +25,7 @@
           <ul class="sidebar__sub {{if isActiveParent $.Data.ActiveCategory .}}sidebar__sub--open{{end}}">
             {{range .Children}}
             <li>
-              <a href="/catalog?category={{.Slug}}"
+              <a href="/catalog/{{.Slug}}"
                  class="sidebar__link sidebar__link--sub {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
                 {{.Name}}
               </a>
@@ -34,7 +34,7 @@
           </ul>
           {{else}}
           <!-- Leaf category — no children -->
-          <a href="/catalog?category={{.Slug}}"
+          <a href="/catalog/{{.Slug}}"
              class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
             {{.Name}}
           </a>
@@ -44,9 +44,8 @@
       </ul>
 
       {{if .Data.AttrDefs}}
-      <!-- Filter form — submits as GET -->
-      <form method="GET" action="/catalog" id="filter-form" style="margin-top:1.5rem">
-        <input type="hidden" name="category" value="{{.Data.ActiveCategory}}">
+      <!-- Filter form — submits as GET, action = clean category path -->
+      <form method="GET" action="{{if .Data.ActiveCategory}}/catalog/{{.Data.ActiveCategory}}{{else}}/catalog{{end}}" id="filter-form" style="margin-top:1.5rem">
         <input type="hidden" name="sort" value="{{.Data.SortBy}}">
 
         <h3 class="sidebar__title" style="margin-top:0">Фильтры</h3>
@@ -67,7 +66,7 @@
         </div>
         {{end}}
         <button class="btn btn--primary btn--sm" type="submit" style="width:100%">Применить</button>
-        <a href="/catalog?category={{.Data.ActiveCategory}}" class="btn btn--outline btn--sm" style="width:100%;margin-top:0.5rem;text-align:center;display:block">Сбросить</a>
+        <a href="{{if .Data.ActiveCategory}}/catalog/{{.Data.ActiveCategory}}{{else}}/catalog{{end}}" class="btn btn--outline btn--sm" style="width:100%;margin-top:0.5rem;text-align:center;display:block">Сбросить</a>
       </form>
       {{end}}
     </aside>
@@ -77,12 +76,13 @@
         <h1 class="page-title">Каталог</h1>
         <div style="display:flex;align-items:center;gap:1rem">
           <span class="catalog-count">{{.Data.Total}} товаров</span>
-          <!-- Sort buttons -->
+          <!-- Sort buttons — use ?sort= query param on clean path -->
           <div style="display:flex;gap:0.5rem">
-            <a href="/catalog?category={{.Data.ActiveCategory}}&sort=price_asc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
+            {{$base := "/catalog"}}{{if .Data.ActiveCategory}}{{$base = printf "/catalog/%s" .Data.ActiveCategory}}{{end}}
+            <a href="{{$base}}?sort=price_asc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
                class="btn btn--sm {{if eq .Data.SortBy "price_asc"}}btn--primary{{else}}btn--outline{{end}}"
                title="Сначала дешевле">↑ Цена</a>
-            <a href="/catalog?category={{.Data.ActiveCategory}}&sort=price_desc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
+            <a href="{{$base}}?sort=price_desc{{range $k,$v := .Data.AttrFilters}}&attr_{{$k}}={{$v}}{{end}}"
                class="btn btn--sm {{if eq .Data.SortBy "price_desc"}}btn--primary{{else}}btn--outline{{end}}"
                title="Сначала дороже">↓ Цена</a>
           </div>
@@ -92,12 +92,12 @@
       <div class="product-grid">
         {{range .Data.Products}}
         <div class="product-card tilt-card">
-          <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+          <a href="/catalog/item/{{.ID}}" class="product-card__img-wrap skeleton">
             {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
             {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
           </a>
           <div class="product-card__body">
-            <h3 class="product-card__name"><a href="/catalog/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
+            <h3 class="product-card__name"><a href="/catalog/item/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
             <p class="product-card__cat">{{.CategoryName}}</p>
             <div class="product-card__footer">
               <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>
@@ -113,7 +113,7 @@
       <div class="pagination">
         {{$cat := .Data.ActiveCategory}}{{$sort := .Data.SortBy}}
         {{range seq 1 .Data.TotalPages}}
-        <a href="/catalog?category={{$cat}}&sort={{$sort}}&page={{.}}"
+        <a href="{{if $cat}}/catalog/{{$cat}}/{{.}}{{else}}/catalog/{{.}}{{end}}{{if $sort}}?sort={{$sort}}{{end}}"
            class="pagination__btn {{if eq . $.Data.Page}}pagination__btn--active{{end}}">{{.}}</a>
         {{end}}
       </div>

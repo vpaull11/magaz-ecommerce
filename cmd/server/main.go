@@ -138,8 +138,11 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.MaxBodySize(32 * 1024)) // 32 KB
 		r.Get("/", catalogH.Index)
-		r.Get("/catalog", catalogH.Catalog)
-		r.Get("/catalog/{id}", catalogH.Product)
+		r.Get("/catalog", catalogH.Catalog)                              // все товары
+		r.Get("/catalog/item/{id:[0-9]+}", catalogH.Product)            // страница товара
+		r.Get("/catalog/{id:[0-9]+}", catalogH.ProductRedirect)         // 301 редирект старых ссылок
+		r.Get("/catalog/{slug}", catalogH.Catalog)                      // категория
+		r.Get("/catalog/{slug}/{page:[0-9]+}", catalogH.Catalog)        // категория + страница пагинации
 	})
 
 	// Auth routes — rate-limited + small body (login/register forms only, no uploads)
