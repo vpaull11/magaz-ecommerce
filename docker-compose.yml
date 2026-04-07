@@ -25,7 +25,6 @@ services:
       DATABASE_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
       PAYMENT_DB_URL: postgres://magaz:magaz@postgres:5432/magaz?sslmode=disable
       PAYMENT_ADDR: ":8081"
-      PAYMENT_ADDR: ":8081"
     # Микросервис оплат доступен только для основного сервера внутри Docker-сети
     depends_on:
       postgres:
