@@ -1,3 +1,11 @@
+{{define "seo_title"}}{{.SiteName}}{{end}}
+{{define "seo_desc"}}{{.SiteDescription}}{{end}}
+{{define "og_type"}}website{{end}}
+{{define "og_title"}}{{template "seo_title" .}}{{end}}
+{{define "og_desc"}}{{template "seo_desc" .}}{{end}}
+{{define "og_image_extra"}}{{end}}
+{{define "json_ld"}}{{end}}
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -5,26 +13,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Primary SEO -->
-  <title>{{block "seo_title" .}}{{.SiteName}}{{end}}</title>
-  <meta name="description" content="{{block "seo_desc" .}}{{.SiteDescription}}{{end}}">
+  <title>{{template "seo_title" .}}</title>
+  <meta name="description" content="{{template "seo_desc" .}}">
   <link rel="canonical" href="{{.CanonicalURL}}">
 
   <!-- Open Graph -->
-  <meta property="og:type"        content="{{block "og_type" .}}website{{end}}">
+  <meta property="og:type"        content="{{template "og_type" .}}">
   <meta property="og:site_name"   content="{{.SiteName}}">
-  <meta property="og:title"       content="{{block "og_title" .}}{{block "seo_title" .}}{{.SiteName}}{{end}}{{end}}">
-  <meta property="og:description" content="{{block "og_desc" .}}{{block "seo_desc" .}}{{.SiteDescription}}{{end}}{{end}}">
+  <meta property="og:title"       content="{{template "og_title" .}}">
+  <meta property="og:description" content="{{template "og_desc" .}}">
   <meta property="og:url"         content="{{.CanonicalURL}}">
   {{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
-  {{block "og_image_extra" .}}{{end}}
+  {{template "og_image_extra" .}}
 
   <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="{{block "seo_title" .}}{{.SiteName}}{{end}}">
-  <meta name="twitter:description" content="{{block "seo_desc" .}}{{.SiteDescription}}{{end}}">
+  <meta name="twitter:title"       content="{{template "seo_title" .}}">
+  <meta name="twitter:description" content="{{template "seo_desc" .}}">
 
   <!-- JSON-LD structured data (overridden per-page) -->
-  {{block "json_ld" .}}{{end}}
+  {{template "json_ld" .}}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
