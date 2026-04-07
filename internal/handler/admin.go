@@ -114,12 +114,15 @@ func NewAdminHandler(
 // GET /admin/categories
 func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
 	flat, _ := h.catSvc.GetFlat()
-	// Build parent name map
-	parentNames := make(map[int64]string)
-	byID := make(map[int64]string)
+
+	// Build lookup maps
+	byID := make(map[int64]string, len(flat))
 	for _, c := range flat {
 		byID[c.ID] = c.Name
 	}
+
+	// Build parent name map
+	parentNames := make(map[int64]string, len(flat))
 	for _, c := range flat {
 		if c.ParentID != nil {
 			parentNames[c.ID] = byID[*c.ParentID]
@@ -127,13 +130,27 @@ func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
 			parentNames[c.ID] = "—"
 		}
 	}
+
+	// Re-order: traverse tree depth-first so children appear right under parent
+	tree, _ := h.catSvc.GetTree()
+	ordered := make([]*models.Category, 0, len(flat))
+	var walk func(cats []*models.Category)
+	walk = func(cats []*models.Category) {
+		for _, c := range cats {
+			ordered = append(ordered, c)
+			walk(c.Children)
+		}
+	}
+	walk(tree)
+
 	errMsg := r.URL.Query().Get("err")
 	h.Render(w, r, "admin_categories.html", map[string]any{
-		"Flat":        flat,
+		"Flat":        ordered,
 		"ParentNames": parentNames,
 		"Error":       errMsg,
 	})
 }
+
 
 // POST /admin/categories/new
 func (h *AdminHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
