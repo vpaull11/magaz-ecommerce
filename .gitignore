@@ -4,8 +4,6 @@
 *.dll
 *.so
 *.dylib
-/magaz
-/payment
 
 # ─── Test artifacts ──────────────────────────────────────────────
 *.test
