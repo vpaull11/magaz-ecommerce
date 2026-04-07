@@ -30,11 +30,12 @@ type ProductFilter struct {
 }
 
 type ProductPage struct {
-	Products   []*models.Product
-	Categories []*models.Category
-	Total      int
-	Page       int
-	TotalPages int
+	Products      []*models.Product
+	Categories    []*models.Category   // flat list
+	CategoryTree  []*models.Category   // hierarchical tree (root categories with Children)
+	Total         int
+	Page          int
+	TotalPages    int
 }
 
 func (s *ProductService) List(f ProductFilter) (*ProductPage, error) {
@@ -59,11 +60,12 @@ func (s *ProductService) List(f ProductFilter) (*ProductPage, error) {
 		totalPages = 1
 	}
 	return &ProductPage{
-		Products:   products,
-		Categories: cats,
-		Total:      total,
-		Page:       f.Page,
-		TotalPages: totalPages,
+		Products:     products,
+		Categories:   cats,
+		CategoryTree: repository.BuildTree(cats),
+		Total:        total,
+		Page:         f.Page,
+		TotalPages:   totalPages,
 	}, nil
 }
 

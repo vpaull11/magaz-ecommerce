@@ -42,6 +42,9 @@ var pageMap = []struct{ name, path string }{
 	{"admin_product_form.html", "admin/admin_product_form.html"},
 	{"admin_orders.html", "admin/admin_orders.html"},
 	{"admin_users.html", "admin/admin_users.html"},
+	{"admin_categories.html", "admin/admin_categories.html"},
+	{"admin_attrs.html", "admin/admin_attrs.html"},
+	{"wishlist.html", "account/wishlist.html"},
 }
 
 func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, tmplDir string) (*Base, error) {
@@ -59,6 +62,15 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, tmplDir 
 				s = append(s, i)
 			}
 			return s
+		},
+		// isActiveParent returns true if any child of cat matches activeSlug
+		"isActiveParent": func(activeSlug string, cat *models.Category) bool {
+			for _, child := range cat.Children {
+				if child.Slug == activeSlug {
+					return true
+				}
+			}
+			return false
 		},
 	}
 

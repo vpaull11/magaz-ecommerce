@@ -1,0 +1,40 @@
+{{define "title"}}Избранное — Magaz{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="account-layout">
+    {{template "account-nav" .}}
+    <div class="account-content">
+      <h1 class="page-title">❤️ Избранное</h1>
+      {{if .Data.Products}}
+      <div class="product-grid">
+        {{range .Data.Products}}
+        <div class="product-card tilt-card">
+          <a href="/catalog/{{.ID}}" class="product-card__img-wrap skeleton">
+            {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Name}}" class="product-card__img">
+            {{else}}<div class="product-card__img-placeholder">📦</div>{{end}}
+          </a>
+          <div class="product-card__body">
+            <h3 class="product-card__name"><a href="/catalog/{{.ID}}" class="product-card__name-link">{{.Name}}</a></h3>
+            <p class="product-card__cat">{{.CategoryName}}</p>
+            <div class="product-card__footer">
+              <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>
+              <button class="btn btn--sm btn--outline wishlist-btn"
+                      data-product-id="{{.ID}}"
+                      data-csrf="{{$.CSRFValue}}"
+                      title="Удалить из избранного">♥ Убрать</button>
+            </div>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="empty-state" style="padding:4rem 2rem;text-align:center">
+        <div style="font-size:4rem;margin-bottom:1rem">🤍</div>
+        <p style="color:var(--c-muted);font-size:1.1rem">В избранном пока пусто</p>
+        <a href="/catalog" class="btn btn--primary mt-4">Перейти в каталог</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

@@ -5,9 +5,41 @@
     <aside class="sidebar">
       <h3 class="sidebar__title">Категории</h3>
       <ul class="sidebar__list">
-        <li><a href="/catalog" class="sidebar__link {{if eq .Data.ActiveCategory ""}}sidebar__link--active{{end}}">Все товары</a></li>
-        {{range .Data.Categories}}
-        <li><a href="/catalog?category={{.Slug}}" class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">{{.Name}}</a></li>
+        <li>
+          <a href="/catalog" class="sidebar__link {{if eq .Data.ActiveCategory ""}}sidebar__link--active{{end}}">
+            Все товары
+          </a>
+        </li>
+        {{range .Data.CategoryTree}}
+        <li class="sidebar__item">
+          {{if .Children}}
+          <!-- Parent category with children — expandable -->
+          <div class="sidebar__group">
+            <a href="/catalog?category={{.Slug}}"
+               class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
+              {{.Name}}
+            </a>
+            <button class="sidebar__toggle" onclick="toggleCat(this)" aria-label="Развернуть"
+                    {{if isActiveParent $.Data.ActiveCategory .}}data-open="true"{{end}}>▾</button>
+          </div>
+          <ul class="sidebar__sub {{if isActiveParent $.Data.ActiveCategory .}}sidebar__sub--open{{end}}">
+            {{range .Children}}
+            <li>
+              <a href="/catalog?category={{.Slug}}"
+                 class="sidebar__link sidebar__link--sub {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
+                {{.Name}}
+              </a>
+            </li>
+            {{end}}
+          </ul>
+          {{else}}
+          <!-- Leaf category — no children -->
+          <a href="/catalog?category={{.Slug}}"
+             class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
+            {{.Name}}
+          </a>
+          {{end}}
+        </li>
         {{end}}
       </ul>
 
@@ -89,4 +121,66 @@
     </div>
   </div>
 </div>
+
+<style>
+/* ── Hierarchical sidebar accordion ─────────────────── */
+.sidebar__item { list-style: none; }
+.sidebar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sidebar__group .sidebar__link { flex: 1; }
+
+.sidebar__toggle {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: var(--c-muted, #94a3b8);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.35rem;
+  transition: transform 0.2s ease, color 0.2s;
+  flex-shrink: 0;
+}
+.sidebar__toggle:hover { color: var(--c-cyan, #67e8f9); }
+.sidebar__toggle[data-open="true"] { transform: rotate(180deg); }
+
+.sidebar__sub {
+  display: none;
+  list-style: none;
+  margin: 0.25rem 0 0.25rem 0.75rem;
+  padding: 0;
+  border-left: 2px solid rgba(103,232,249,0.2);
+  padding-left: 0.75rem;
+}
+.sidebar__sub--open { display: block; }
+
+.sidebar__link--sub {
+  font-size: 0.875rem;
+  opacity: 0.85;
+  padding: 0.25rem 0.5rem;
+}
+.sidebar__link--sub:hover { opacity: 1; }
+</style>
+
+<script>
+function toggleCat(btn) {
+  const open = btn.getAttribute('data-open') === 'true';
+  const sub = btn.closest('.sidebar__group').nextElementSibling;
+  if (open) {
+    btn.removeAttribute('data-open');
+    sub.classList.remove('sidebar__sub--open');
+  } else {
+    btn.setAttribute('data-open', 'true');
+    sub.classList.add('sidebar__sub--open');
+  }
+}
+// Auto-open parent if a child is active (already done server-side,
+// but ensure JS syncs the button state for pre-opened lists)
+document.querySelectorAll('.sidebar__sub--open').forEach(function(sub) {
+  const btn = sub.previousElementSibling && sub.previousElementSibling.querySelector('.sidebar__toggle');
+  if (btn) btn.setAttribute('data-open', 'true');
+});
+</script>
 {{end}}
