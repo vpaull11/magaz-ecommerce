@@ -45,6 +45,7 @@ var pageMap = []struct{ name, path string }{
 	{"admin_users.html", "admin/admin_users.html"},
 	{"admin_categories.html", "admin/admin_categories.html"},
 	{"admin_attrs.html", "admin/admin_attrs.html"},
+	{"admin_settings.html", "admin/admin_settings.html"},
 	{"wishlist.html", "account/wishlist.html"},
 }
 
