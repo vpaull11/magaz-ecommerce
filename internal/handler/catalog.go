@@ -37,7 +37,7 @@ func (h *CatalogHandler) Index(w http.ResponseWriter, r *http.Request) {
 
 // GET /catalog
 func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
-	cat := r.URL.Query().Get("category")
+	catSlug := r.URL.Query().Get("category")
 	pageNum, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	sortBy := r.URL.Query().Get("sort") // "price_asc" | "price_desc"
 
@@ -52,8 +52,29 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Resolve category slug → IDs (parent + all children)
+	var categoryIDs []int64
+	var attrDefs []*models.AttrDef
+	if catSlug != "" {
+		catObj, err2 := h.catRepo.FindBySlug(catSlug)
+		if err2 == nil {
+			// Collect the category itself + all its children from the flat list
+			allCats, _ := h.catRepo.List()
+			categoryIDs = append(categoryIDs, catObj.ID)
+			for _, c := range allCats {
+				if c.ParentID != nil && *c.ParentID == catObj.ID {
+					categoryIDs = append(categoryIDs, c.ID)
+				}
+			}
+			// Load attr defs for the selected category (for filter sidebar)
+			if h.catSvc != nil {
+				attrDefs, _ = h.catSvc.ListDefs(catObj.ID)
+			}
+		}
+	}
+
 	page, err := h.productSvc.List(service.ProductFilter{
-		Category:    cat,
+		CategoryIDs: categoryIDs,
 		Page:        pageNum,
 		PerPage:     12,
 		SortBy:      sortBy,
@@ -62,14 +83,6 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Ошибка загрузки каталога", http.StatusInternalServerError)
 		return
-	}
-
-	// Load attr defs for active category (for filter sidebar)
-	var attrDefs []*models.AttrDef
-	if cat != "" && h.catSvc != nil {
-		if catObj, err2 := h.catRepo.FindBySlug(cat); err2 == nil {
-			attrDefs, _ = h.catSvc.ListDefs(catObj.ID)
-		}
 	}
 
 	type CatalogData struct {
@@ -81,12 +94,13 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Render(w, r, "catalog.html", CatalogData{
 		ProductPage:    page,
-		ActiveCategory: cat,
+		ActiveCategory: catSlug,
 		SortBy:         sortBy,
 		AttrDefs:       attrDefs,
 		AttrFilters:    attrFilters,
 	})
 }
+
 
 // GET /catalog/{id}
 func (h *CatalogHandler) Product(w http.ResponseWriter, r *http.Request) {

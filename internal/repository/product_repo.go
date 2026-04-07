@@ -31,15 +31,26 @@ func scanProduct(row interface{ Scan(...any) error }) (*models.Product, error) {
 	)
 }
 
-func (r *ProductRepository) List(categorySlug string, limit, offset int, sortBy string, attrFilters map[int64]string) ([]*models.Product, int, error) {
+func (r *ProductRepository) List(categoryIDs []int64, limit, offset int, sortBy string, attrFilters map[int64]string) ([]*models.Product, int, error) {
 	var (
 		args  []any
 		where string
 	)
-	if categorySlug != "" {
-		where = " WHERE p.is_active = TRUE AND c.slug = $1"
-		args = []any{categorySlug, limit, offset}
+	if len(categoryIDs) == 1 {
+		// Single category — fast path
+		where = " WHERE p.is_active = TRUE AND p.category_id = $1"
+		args = []any{categoryIDs[0], limit, offset}
+	} else if len(categoryIDs) > 1 {
+		// Multiple categories (parent + children) — use IN (...)
+		placeholders := make([]string, len(categoryIDs))
+		for i, id := range categoryIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args = append(args, id)
+		}
+		where = fmt.Sprintf(" WHERE p.is_active = TRUE AND p.category_id IN (%s)", strings.Join(placeholders, ","))
+		args = append(args, limit, offset)
 	} else {
+		// No category filter
 		where = " WHERE p.is_active = TRUE"
 		args = []any{limit, offset}
 	}
