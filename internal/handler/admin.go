@@ -113,35 +113,43 @@ func NewAdminHandler(
 
 // GET /admin/categories
 func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
+	// One DB call — flat list sorted by sort_order, name
 	flat, _ := h.catSvc.GetFlat()
 
-	// Build lookup maps
-	byID := make(map[int64]string, len(flat))
+	// Build lookup by ID
+	byID := make(map[int64]*models.Category, len(flat))
 	for _, c := range flat {
-		byID[c.ID] = c.Name
+		byID[c.ID] = c
 	}
 
-	// Build parent name map
+	// Parent name map for table display
 	parentNames := make(map[int64]string, len(flat))
 	for _, c := range flat {
 		if c.ParentID != nil {
-			parentNames[c.ID] = byID[*c.ParentID]
+			if p, ok := byID[*c.ParentID]; ok {
+				parentNames[c.ID] = p.Name
+			}
 		} else {
 			parentNames[c.ID] = "—"
 		}
 	}
 
-	// Re-order: traverse tree depth-first so children appear right under parent
-	tree, _ := h.catSvc.GetTree()
-	ordered := make([]*models.Category, 0, len(flat))
-	var walk func(cats []*models.Category)
-	walk = func(cats []*models.Category) {
-		for _, c := range cats {
-			ordered = append(ordered, c)
-			walk(c.Children)
+	// Build ordered list: each root followed immediately by its children
+	// (children map: parentID → []*Category)
+	children := make(map[int64][]*models.Category)
+	var roots []*models.Category
+	for _, c := range flat {
+		if c.ParentID == nil {
+			roots = append(roots, c)
+		} else {
+			children[*c.ParentID] = append(children[*c.ParentID], c)
 		}
 	}
-	walk(tree)
+	ordered := make([]*models.Category, 0, len(flat))
+	for _, root := range roots {
+		ordered = append(ordered, root)
+		ordered = append(ordered, children[root.ID]...)
+	}
 
 	errMsg := r.URL.Query().Get("err")
 	h.Render(w, r, "admin_categories.html", map[string]any{
