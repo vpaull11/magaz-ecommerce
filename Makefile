@@ -19,6 +19,9 @@ lint:
 test:
 	go test ./... -v -count=1
 
+seed:
+	go run ./cmd/seed
+
 docker-up:
 	docker compose up --build -d
 
