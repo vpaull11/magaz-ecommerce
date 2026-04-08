@@ -49,7 +49,7 @@
       <a href="/catalog" class="nav__link">Каталог</a>
       
       <div class="search-container">
-        <input type="text" id="live-search" class="search-input" placeholder="Поиск товаров...", autocomplete="off">
+        <input type="text" id="live-search" class="search-input" placeholder="Поиск товаров..." autocomplete="off">
         <div id="search-results" class="search-results"></div>
       </div>
 
@@ -85,8 +85,49 @@
         <a href="/auth/register" class="btn btn--sm btn--primary">Регистрация</a>
       {{end}}
     </div>
+    <!-- Burger button (visible on mobile) -->
+    <button class="nav__burger" id="nav-burger" aria-label="Открыть меню" aria-expanded="false">☰</button>
   </div>
 </nav>
+
+<!-- ── MOBILE OVERLAY ──────────────────────────────────────────────────────── -->
+<div class="nav__mobile-overlay" id="nav-mobile-overlay"></div>
+
+<!-- ── MOBILE MENU ─────────────────────────────────────────────────────────── -->
+<div class="nav__mobile-menu" id="nav-mobile-menu" role="dialog" aria-modal="true" aria-label="Навигация">
+  <div class="nav__mobile-header">
+    <span class="nav__mobile-logo">🛍 Magaz</span>
+    <button class="nav__mobile-close" id="nav-mobile-close" aria-label="Закрыть меню">✕</button>
+  </div>
+  <nav class="nav__mobile-links">
+    <a href="/" class="nav__mobile-link"><span class="link-icon">🏠</span>Главная</a>
+    <a href="/catalog" class="nav__mobile-link"><span class="link-icon">🗂</span>Каталог</a>
+    {{if .User}}
+      <hr class="nav__mobile-divider">
+      <a href="/cart" class="nav__mobile-link"><span class="link-icon">🛒</span>Корзина{{if gt .CartCount 0}} ({{.CartCount}}){{end}}</a>
+      <a href="/wishlist" class="nav__mobile-link"><span class="link-icon">💖</span>Избранное</a>
+      <a href="/account" class="nav__mobile-link"><span class="link-icon">👤</span>Профиль</a>
+      <a href="/account/orders" class="nav__mobile-link"><span class="link-icon">📦</span>Заказы</a>
+      <a href="/account/addresses" class="nav__mobile-link"><span class="link-icon">📍</span>Адреса</a>
+      {{if .User.IsAdmin}}
+        <hr class="nav__mobile-divider">
+        <a href="/admin" class="nav__mobile-link" style="color:var(--c-amber)"><span class="link-icon">⚙️</span>Панель администратора</a>
+      {{end}}
+      <hr class="nav__mobile-divider">
+      <div class="nav__mobile-user">
+        <div class="nav__mobile-username">Вы вошли как {{.User.Name}}</div>
+        <form method="POST" action="/auth/logout">
+          {{.CSRF}}
+          <button class="nav__mobile-link" type="submit" style="width:100%;cursor:pointer;background:none;border:none"><span class="link-icon">🚪</span>Выйти</button>
+        </form>
+      </div>
+    {{else}}
+      <hr class="nav__mobile-divider">
+      <a href="/auth/login" class="nav__mobile-link"><span class="link-icon">🔑</span>Войти</a>
+      <a href="/auth/register" class="nav__mobile-link"><span class="link-icon">✨</span>Регистрация</a>
+    {{end}}
+  </nav>
+</div>
 
 <!-- ── FLASH ──────────────────────────────────────────────────────────────── -->
 {{if .Flash}}
@@ -127,6 +168,119 @@
 </div>
 
 <div id="toast-container"></div>
+
+<!-- ── BOTTOM NAVIGATION (mobile) ────────────────────────────────────────── -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Мобильная навигация">
+  <div class="bottom-nav__inner">
+    <a href="/" class="bottom-nav__item" data-path="/">
+      <span class="bottom-nav__icon">🏠</span>
+      <span>Главная</span>
+    </a>
+    <a href="/catalog" class="bottom-nav__item" data-path="/catalog">
+      <span class="bottom-nav__icon">🗂</span>
+      <span>Каталог</span>
+    </a>
+    {{if .User}}
+    <a href="/cart" class="bottom-nav__item" data-path="/cart">
+      <span class="bottom-nav__icon" style="position:relative">
+        🛒
+        {{if gt .CartCount 0}}<span class="bottom-nav__badge">{{.CartCount}}</span>{{end}}
+      </span>
+      <span>Корзина</span>
+    </a>
+    <a href="/account" class="bottom-nav__item" data-path="/account">
+      <span class="bottom-nav__icon">👤</span>
+      <span>Профиль</span>
+    </a>
+    {{else}}
+    <a href="/auth/login" class="bottom-nav__item" data-path="/auth/login">
+      <span class="bottom-nav__icon">🔑</span>
+      <span>Войти</span>
+    </a>
+    <a href="/auth/register" class="bottom-nav__item" data-path="/auth/register">
+      <span class="bottom-nav__icon">✨</span>
+      <span>Аккаунт</span>
+    </a>
+    {{end}}
+    <button class="bottom-nav__item" id="bottom-nav-search-btn">
+      <span class="bottom-nav__icon">🔍</span>
+      <span>Поиск</span>
+    </button>
+  </div>
+</nav>
+
 <script src="/static/js/main.js?v=4"></script>
+<script>
+// ─── Mobile Menu ──────────────────────────────────────────────────────────
+(function() {
+  const burger  = document.getElementById('nav-burger');
+  const menu    = document.getElementById('nav-mobile-menu');
+  const overlay = document.getElementById('nav-mobile-overlay');
+  const closeBtn= document.getElementById('nav-mobile-close');
+
+  function openMenu() {
+    menu.classList.add('open');
+    overlay.classList.add('open');
+    burger.classList.add('open');
+    burger.setAttribute('aria-expanded', 'true');
+    burger.innerHTML = '✕';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    menu.classList.remove('open');
+    overlay.classList.remove('open');
+    burger.classList.remove('open');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.innerHTML = '☰';
+    document.body.style.overflow = '';
+  }
+
+  burger && burger.addEventListener('click', () => menu.classList.contains('open') ? closeMenu() : openMenu());
+  closeBtn && closeBtn.addEventListener('click', closeMenu);
+  overlay && overlay.addEventListener('click', closeMenu);
+
+  // Close on Escape
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+  // Swipe left to close
+  let touchStartX = 0;
+  menu && menu.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  menu && menu.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientX - touchStartX < -60) closeMenu();
+  }, { passive: true });
+
+  // ─── Bottom nav: mark active tab ─────────────────────────────────────
+  const path = window.location.pathname;
+  document.querySelectorAll('.bottom-nav__item[data-path]').forEach(el => {
+    const p = el.dataset.path;
+    if (p === '/' ? path === '/' : path.startsWith(p)) {
+      el.classList.add('active');
+    }
+  });
+
+  // ─── Mobile search toggle ─────────────────────────────────────────────
+  const searchBtn = document.getElementById('bottom-nav-search-btn');
+  const searchBox = document.querySelector('.search-container');
+  if (searchBtn && searchBox) {
+    searchBtn.addEventListener('click', () => {
+      searchBox.classList.toggle('mobile-open');
+      if (searchBox.classList.contains('mobile-open')) {
+        searchBox.querySelector('input')?.focus();
+      }
+    });
+  }
+
+  // ─── Mobile first-visit hint ──────────────────────────────────────────
+  const isMobile = window.matchMedia('(max-width: 640px)').matches;
+  if (isMobile && !sessionStorage.getItem('mob_hint_shown')) {
+    sessionStorage.setItem('mob_hint_shown', '1');
+    setTimeout(() => {
+      if (window.showToast) {
+        window.showToast('📱 Сайт оптимизирован для мобильных устройств', 'success');
+      }
+    }, 1200);
+  }
+})();
+</script>
 </body>
 </html>
