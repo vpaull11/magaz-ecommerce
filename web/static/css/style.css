@@ -1005,10 +1005,14 @@ input[type="number"].qty-input::-webkit-outer-spin-button {
   display: flex; align-items: center; justify-content: center;
 }
 
+.mobile-only-inline { display: none !important; }
+
 /* ─── Responsive: Tablet (≤ 900px) ──────────────────────────────────────── */
 @media (max-width: 900px) {
+  .mobile-only-inline { display: inline-flex !important; }
   .catalog-layout { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+  .sidebar { display: none; margin-bottom: 1.5rem; }
+  .sidebar.sidebar--open { display: block; animation: dropIn .2s ease; }
   .cart-layout, .checkout-layout { grid-template-columns: 1fr; }
   .cart-summary, .checkout-summary { position: static; }
   .product-detail { grid-template-columns: 1fr; }

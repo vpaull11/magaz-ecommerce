@@ -75,7 +75,8 @@
     <div class="catalog-main">
       <div class="catalog-header">
         <h1 class="page-title">Каталог</h1>
-        <div style="display:flex;align-items:center;gap:1rem">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+          <button type="button" id="mobile-sidebar-toggle" class="btn btn--outline btn--sm mobile-only-inline">☰ Фильтры</button>
           <span class="catalog-count">{{.Data.Total}} товаров</span>
           <!-- Sort buttons — use ?sort= query param on clean path -->
           <div style="display:flex;gap:0.5rem">
@@ -183,5 +184,18 @@ document.querySelectorAll('.sidebar__sub--open').forEach(function(sub) {
   const btn = sub.previousElementSibling && sub.previousElementSibling.querySelector('.sidebar__toggle');
   if (btn) btn.setAttribute('data-open', 'true');
 });
+
+const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
+const sidebar = document.querySelector('.sidebar');
+if (mobileSidebarToggle && sidebar) {
+  mobileSidebarToggle.addEventListener('click', function() {
+    sidebar.classList.toggle('sidebar--open');
+    if (sidebar.classList.contains('sidebar--open')) {
+      mobileSidebarToggle.innerHTML = '✕ Скрыть';
+    } else {
+      mobileSidebarToggle.innerHTML = '☰ Фильтры';
+    }
+  });
+}
 </script>
 {{end}}
