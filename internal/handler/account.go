@@ -50,6 +50,29 @@ func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/account", http.StatusFound)
 }
 
+// POST /account/password
+func (h *AccountHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	u := middleware.UserFromCtx(r)
+	
+	oldPass := r.FormValue("old_password")
+	newPass := r.FormValue("new_password")
+	confirmPass := r.FormValue("confirm_password")
+
+	if newPass != confirmPass {
+		h.Flash(w, r, "Пароли не совпадают", "error")
+		http.Redirect(w, r, "/account", http.StatusFound)
+		return
+	}
+
+	if err := h.authSvc.ChangePassword(u.ID, oldPass, newPass); err != nil {
+		h.Flash(w, r, err.Error(), "error")
+	} else {
+		h.Flash(w, r, "Пароль успешно изменён", "success")
+	}
+
+	http.Redirect(w, r, "/account", http.StatusFound)
+}
+
 // GET /account/addresses
 func (h *AccountHandler) Addresses(w http.ResponseWriter, r *http.Request) {
 	u := middleware.UserFromCtx(r)

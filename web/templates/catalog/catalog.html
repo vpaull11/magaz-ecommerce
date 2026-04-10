@@ -103,9 +103,21 @@
             <p class="product-card__cat">{{.CategoryName}}</p>
             <div class="product-card__footer">
               <span class="product-card__price">{{printf "%.2f" .Price}} ₽</span>
-              {{if gt .Stock 0}}<span class="badge badge--green">В наличии</span>
-              {{else}}<span class="badge badge--red">Нет в наличии</span>{{end}}
+              {{if gt .Stock 0}}
+                <span class="badge badge--green">В наличии</span>
+              {{else}}
+                <span class="badge badge--red">Нет в наличии</span>
+              {{end}}
             </div>
+            {{if and $.User (gt .Stock 0)}}
+            <button
+              type="button"
+              class="btn btn--primary btn--sm btn--full quick-cart-btn"
+              data-product-id="{{.ID}}"
+              title="Добавить в корзину"
+              style="margin-top:0.6rem"
+            >🛒 В корзину</button>
+            {{end}}
           </div>
         </div>
         {{else}}<div class="empty-state"><p>Товары не найдены</p></div>{{end}}
@@ -125,7 +137,34 @@
 </div>
 
 <style>
-/* ── Hierarchical sidebar accordion ─────────────────── */
+  /* ── Quick add-to-cart button ─────────────────── */
+.quick-cart-btn {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+  display: block;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s;
+  pointer-events: none;
+  /* Must sit above the full-card anchor overlay (.product-card__name-link::before z-index:1) */
+  position: relative;
+  z-index: 3;
+}
+.product-card:hover .quick-cart-btn,
+.product-card:focus-within .quick-cart-btn {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.quick-cart-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* Override .btn--primary hover transform so it doesn't fight tilt effect */
+.quick-cart-btn:hover {
+  transform: none !important;
+}
 .sidebar__item { list-style: none; }
 .sidebar__group {
   display: flex;
@@ -197,5 +236,7 @@ if (mobileSidebarToggle && sidebar) {
     }
   });
 }
+
+
 </script>
 {{end}}

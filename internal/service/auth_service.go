@@ -190,6 +190,28 @@ func (s *AuthService) UpdateName(id int64, name string) error {
 	return s.users.UpdateName(id, name)
 }
 
+func (s *AuthService) ChangePassword(id int64, oldPassword, newPassword string) error {
+	u, err := s.users.FindByID(id)
+	if err != nil {
+		return err
+	}
+	
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(oldPassword)); err != nil {
+		return errors.New("неверный текущий пароль")
+	}
+
+	if len(newPassword) < 8 {
+		return ErrWeakPassword
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+
+	return s.users.UpdatePassword(u.ID, string(hash))
+}
+
 func generateToken(n int) (string, error) {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {

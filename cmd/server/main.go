@@ -182,6 +182,7 @@ func main() {
 
 		r.Get("/account", accountH.Profile)
 		r.Post("/account", accountH.UpdateProfile)
+		r.Post("/account/password", accountH.UpdatePassword)
 		r.Get("/account/addresses", accountH.Addresses)
 		r.Post("/account/addresses", accountH.AddAddress)
 		r.Post("/account/addresses/delete", accountH.DeleteAddress)

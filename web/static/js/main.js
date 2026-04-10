@@ -111,55 +111,72 @@ function showToast(message, type = 'success') {
 }
 
 // 2. AJAX Add-to-Cart
+async function ajaxAddToCart(productId, quantity, btn) {
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳'; btn.disabled = true; }
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+  try {
+    const res = await fetch('/api/cart/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({ product_id: productId, quantity: quantity })
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      showToast('Войдите, чтобы добавить в корзину', 'error');
+      setTimeout(() => window.location.href = '/auth/login', 1200);
+      return;
+    }
+
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Товар добавлен в корзину!', 'success');
+      // Animate badge pulse
+      const badge = document.querySelector('#nav-cart-badge');
+      if (badge) {
+        badge.style.transform = 'scale(1.6)';
+        setTimeout(() => { badge.style.transform = ''; }, 300);
+      }
+      // Update header nav (badge + total)
+      await updateHeaderNavFields();
+      // Also update bottom-nav badge if present
+      const bottomBadge = document.querySelector('.bottom-nav__badge');
+      if (data.cart_count > 0) {
+        const cartNavItem = document.querySelector('.bottom-nav__item[data-path="/cart"] .bottom-nav__icon');
+        if (cartNavItem) {
+          let bb = cartNavItem.querySelector('.bottom-nav__badge');
+          if (!bb) {
+            bb = document.createElement('span');
+            bb.className = 'bottom-nav__badge';
+            cartNavItem.appendChild(bb);
+          }
+          bb.textContent = data.cart_count;
+        }
+      }
+    } else {
+      showToast('Ошибка добавления в корзину', 'error');
+    }
+  } catch (err) {
+    showToast('Ошибка соединения', 'error');
+  } finally {
+    if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+  }
+}
+
 document.querySelectorAll('form[action="/cart/add"]').forEach(form => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳...';
-    btn.disabled = true;
-
     const fd = new FormData(form);
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-    try {
-      const res = await fetch('/api/cart/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        body: JSON.stringify({
-          product_id: parseInt(fd.get('product_id')),
-          quantity: parseInt(fd.get('quantity') || 1)
-        })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        showToast('Товар успешно добавлен в корзину!', 'success');
-        
-        // Update cart counter in header
-        const counter = document.getElementById('nav-cart-count');
-        if (counter) {
-          counter.textContent = data.cart_count;
-          // Pulse anim
-          counter.style.transform = 'scale(1.5)';
-          counter.style.color = 'var(--danger)';
-          setTimeout(() => {
-            counter.style.transform = 'none';
-            counter.style.color = '';
-          }, 300);
-        }
-      } else {
-        showToast('Ошибка добавления', 'error');
-      }
-    } catch (err) {
-      showToast('Вы не авторизованы', 'error');
-    } finally {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-    }
+    await ajaxAddToCart(
+      parseInt(fd.get('product_id')),
+      parseInt(fd.get('quantity') || 1),
+      btn
+    );
   });
 });
 
@@ -454,3 +471,13 @@ if (cartBtn && cartDrawer && cartOverlay) {
     if (e.key === 'Escape') closeCartDrawer();
   });
 }
+
+/* ─── Quick add-to-cart (catalog cards) ──────────────────────────────────── */
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.quick-cart-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const pid = parseInt(btn.dataset.productId);
+  if (pid) await ajaxAddToCart(pid, 1, btn);
+});
