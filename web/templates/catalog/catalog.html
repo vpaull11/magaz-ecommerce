@@ -20,7 +20,7 @@
                class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
               {{.Name}}
             </a>
-            <button class="sidebar__toggle" onclick="toggleCat(this)" aria-label="Развернуть"
+            <button class="sidebar__toggle" aria-label="Развернуть"
                     {{if isActiveParent $.Data.ActiveCategory .}}data-open="true"{{end}}>▾</button>
           </div>
           <ul class="sidebar__sub {{if isActiveParent $.Data.ActiveCategory .}}sidebar__sub--open{{end}}">
@@ -204,39 +204,5 @@
 }
 .sidebar__link--sub:hover { opacity: 1; }
 </style>
-
-<script>
-function toggleCat(btn) {
-  const open = btn.getAttribute('data-open') === 'true';
-  const sub = btn.closest('.sidebar__group').nextElementSibling;
-  if (open) {
-    btn.removeAttribute('data-open');
-    sub.classList.remove('sidebar__sub--open');
-  } else {
-    btn.setAttribute('data-open', 'true');
-    sub.classList.add('sidebar__sub--open');
-  }
-}
-// Auto-open parent if a child is active (already done server-side,
-// but ensure JS syncs the button state for pre-opened lists)
-document.querySelectorAll('.sidebar__sub--open').forEach(function(sub) {
-  const btn = sub.previousElementSibling && sub.previousElementSibling.querySelector('.sidebar__toggle');
-  if (btn) btn.setAttribute('data-open', 'true');
-});
-
-const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
-const sidebar = document.querySelector('.sidebar');
-if (mobileSidebarToggle && sidebar) {
-  mobileSidebarToggle.addEventListener('click', function() {
-    sidebar.classList.toggle('sidebar--open');
-    if (sidebar.classList.contains('sidebar--open')) {
-      mobileSidebarToggle.innerHTML = '✕ Скрыть';
-    } else {
-      mobileSidebarToggle.innerHTML = '☰ Фильтры';
-    }
-  });
-}
-
-
-</script>
 {{end}}
+

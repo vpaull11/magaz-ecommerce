@@ -483,6 +483,43 @@ document.addEventListener('click', async (e) => {
 });
 
 /* ==========================================================================
+   Catalog Sidebar — Category toggle (moved from inline script for CSP)
+   ========================================================================== */
+(function() {
+  // Event delegation for sidebar toggle buttons
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.sidebar__toggle');
+    if (!btn) return;
+    const open = btn.getAttribute('data-open') === 'true';
+    const sub = btn.closest('.sidebar__group').nextElementSibling;
+    if (open) {
+      btn.removeAttribute('data-open');
+      sub.classList.remove('sidebar__sub--open');
+    } else {
+      btn.setAttribute('data-open', 'true');
+      sub.classList.add('sidebar__sub--open');
+    }
+  });
+
+  // Auto-open parent if a child is active
+  document.querySelectorAll('.sidebar__sub--open').forEach(function(sub) {
+    const prev = sub.previousElementSibling;
+    const btn = prev && prev.querySelector('.sidebar__toggle');
+    if (btn) btn.setAttribute('data-open', 'true');
+  });
+
+  // Mobile sidebar toggle
+  const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
+  const sidebar = document.querySelector('.sidebar');
+  if (mobileSidebarToggle && sidebar) {
+    mobileSidebarToggle.addEventListener('click', function() {
+      sidebar.classList.toggle('sidebar--open');
+      mobileSidebarToggle.innerHTML = sidebar.classList.contains('sidebar--open') ? '✕ Скрыть' : '☰ Фильтры';
+    });
+  }
+})();
+
+/* ==========================================================================
    Mobile Menu (moved from inline script for CSP compliance)
    ========================================================================== */
 (function() {
