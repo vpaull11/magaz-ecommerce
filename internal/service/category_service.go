@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"strings"
+	"sync"
 	"unicode"
 
 	"magaz/internal/models"
@@ -12,23 +13,76 @@ import (
 type CategoryService struct {
 	cats *repository.CategoryRepository
 	attr *repository.AttrRepository
+
+	mu          sync.RWMutex
+	cachedFlat  []*models.Category
+	cachedTree  []*models.Category
+	cacheLoaded bool
 }
 
 func NewCategoryService(cats *repository.CategoryRepository, attr *repository.AttrRepository) *CategoryService {
 	return &CategoryService{cats: cats, attr: attr}
 }
 
-// GetTree returns root categories with nested Children.
-func (s *CategoryService) GetTree() ([]*models.Category, error) {
-	flat, err := s.cats.ListTree()
+// loadCache refreshes the cache from the database (under write lock).
+func (s *CategoryService) loadCache() {
+	flat, err := s.cats.List()
 	if err != nil {
-		return nil, err
+		return
 	}
-	return repository.BuildTree(flat), nil
+	tree, err := s.cats.ListTree()
+	if err != nil {
+		return
+	}
+	s.cachedFlat = flat
+	s.cachedTree = repository.BuildTree(tree)
+	s.cacheLoaded = true
+}
+
+// invalidate reloads cache under write lock; called after mutations.
+func (s *CategoryService) invalidate() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.loadCache()
+}
+
+// GetTree returns root categories with nested Children (cached).
+func (s *CategoryService) GetTree() ([]*models.Category, error) {
+	s.mu.RLock()
+	if s.cacheLoaded {
+		defer s.mu.RUnlock()
+		return s.cachedTree, nil
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	if !s.cacheLoaded {
+		s.loadCache()
+	}
+	s.mu.Unlock()
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cachedTree, nil
 }
 
 func (s *CategoryService) GetFlat() ([]*models.Category, error) {
-	return s.cats.List()
+	s.mu.RLock()
+	if s.cacheLoaded {
+		defer s.mu.RUnlock()
+		return s.cachedFlat, nil
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	if !s.cacheLoaded {
+		s.loadCache()
+	}
+	s.mu.Unlock()
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cachedFlat, nil
 }
 
 func (s *CategoryService) FindByID(id int64) (*models.Category, error) {
@@ -48,7 +102,11 @@ func (s *CategoryService) Create(name, slug string, parentID *int64, sortOrder i
 		SeoTitle:       seoTitle,
 		SeoDescription: seoDesc,
 	}
-	return c, s.cats.Create(c)
+	err := s.cats.Create(c)
+	if err == nil {
+		s.invalidate()
+	}
+	return c, err
 }
 
 func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, sortOrder int, seoTitle, seoDesc string) error {
@@ -65,7 +123,11 @@ func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, s
 	c.SortOrder = sortOrder
 	c.SeoTitle = seoTitle
 	c.SeoDescription = seoDesc
-	return s.cats.Update(c)
+	err = s.cats.Update(c)
+	if err == nil {
+		s.invalidate()
+	}
+	return err
 }
 
 // Delete enforces business rules before deleting.
@@ -73,7 +135,11 @@ func (s *CategoryService) Delete(id int64) error {
 	if has, _ := s.cats.HasProducts(id); has {
 		return errors.New("нельзя удалить категорию, в которой есть товары")
 	}
-	return s.cats.Delete(id) // children are moved to root inside repo tx
+	err := s.cats.Delete(id) // children are moved to root inside repo tx
+	if err == nil {
+		s.invalidate()
+	}
+	return err
 }
 
 // ─── AttrDef management ───────────────────────────────────────────────────────

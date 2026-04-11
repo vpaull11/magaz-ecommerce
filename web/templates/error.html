@@ -1,0 +1,15 @@
+{{define "seo_title"}}{{.Data.Title}} — {{.SiteName}}{{end}}
+{{define "seo_desc"}}{{.Data.Message}}{{end}}
+{{define "content"}}
+<div class="container">
+  <div class="error-page">
+    <div class="error-page__code">{{.Data.Code}}</div>
+    <h1 class="error-page__title">{{.Data.Title}}</h1>
+    <p class="error-page__message">{{.Data.Message}}</p>
+    <div class="error-page__actions">
+      <a href="/" class="btn btn--primary">На главную</a>
+      <a href="/catalog" class="btn btn--outline">Каталог</a>
+    </div>
+  </div>
+</div>
+{{end}}

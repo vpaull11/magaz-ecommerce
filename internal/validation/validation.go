@@ -138,3 +138,20 @@ func ValidateAddress(label, city, street, zip string) error {
 	}
 	return ValidateZip(zip)
 }
+
+// ─── Email validation ─────────────────────────────────────────────────────────
+
+// ValidateEmail checks email format and length.
+func ValidateEmail(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return errors.New("укажите email")
+	}
+	if len(email) > 255 {
+		return errors.New("email слишком длинный (максимум 255 символов)")
+	}
+	if !emailPattern.MatchString(email) {
+		return errors.New("некорректный формат email")
+	}
+	return nil
+}

@@ -2,8 +2,10 @@ package handler
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -114,7 +116,10 @@ func NewAdminHandler(
 // GET /admin/categories
 func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
 	// One DB call — flat list sorted by sort_order, name
-	flat, _ := h.catSvc.GetFlat()
+	flat, err := h.catSvc.GetFlat()
+	if err != nil {
+		slog.Error("admin: list categories failed", "err", err)
+	}
 
 	// Build lookup by ID
 	byID := make(map[int64]*models.Category, len(flat))
@@ -265,7 +270,28 @@ func (h *AdminHandler) DeleteAttrDef(w http.ResponseWriter, r *http.Request) {
 // GET /admin
 func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	orders, total, _ := h.orderSvc.ListAll(1, 5)
-	h.Render(w, r, "admin_dashboard.html", map[string]any{"Orders": orders, "Total": total})
+
+	// Gather dashboard stats
+	var userCount int
+	_, userCount, _ = h.userRepo.List(1, 0)
+
+	// Revenue and order count for the last 30 days
+	stats, err := h.orderSvc.Stats()
+	if err != nil {
+		slog.Error("admin: dashboard stats failed", "err", err)
+	}
+
+	// Low stock count
+	lowStock, _ := h.productSvc.CountLowStock(5)
+
+	h.Render(w, r, "admin_dashboard.html", map[string]any{
+		"Orders":       orders,
+		"Total":        total,
+		"UserCount":    userCount,
+		"Revenue30d":   stats.Revenue30d,
+		"Orders30d":    stats.Orders30d,
+		"LowStockCount": lowStock,
+	})
 }
 
 // GET /admin/settings
@@ -305,12 +331,21 @@ func (h *AdminHandler) SaveSettings(w http.ResponseWriter, r *http.Request) {
 // GET /admin/products
 func (h *AdminHandler) Products(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	products, total, err := h.productSvc.ListAdmin(page, 20)
+	if page <= 0 {
+		page = 1
+	}
+	perPage := 20
+	products, total, err := h.productSvc.ListAdmin(page, perPage)
 	if err != nil {
+		slog.Error("admin: list products failed", "err", err)
 		http.Error(w, "Ошибка", http.StatusInternalServerError)
 		return
 	}
-	h.Render(w, r, "admin_products.html", map[string]any{"Products": products, "Total": total, "Page": page})
+	totalPages := (total + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	h.Render(w, r, "admin_products.html", map[string]any{"Products": products, "Total": total, "Page": page, "TotalPages": totalPages})
 }
 
 // GET /admin/products/new
@@ -420,8 +455,49 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 // GET /admin/orders
 func (h *AdminHandler) Orders(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	orders, total, _ := h.orderSvc.ListAll(page, 20)
-	h.Render(w, r, "admin_orders.html", map[string]any{"Orders": orders, "Total": total, "Page": page})
+	if page <= 0 {
+		page = 1
+	}
+	perPage := 20
+	orders, total, _ := h.orderSvc.ListAll(page, perPage)
+	totalPages := (total + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	h.Render(w, r, "admin_orders.html", map[string]any{"Orders": orders, "Total": total, "Page": page, "TotalPages": totalPages})
+}
+
+// GET /admin/orders/export — CSV export of all orders
+func (h *AdminHandler) OrdersExport(w http.ResponseWriter, r *http.Request) {
+	orders, _, err := h.orderSvc.ListAll(1, 100000)
+	if err != nil {
+		slog.Error("admin: export orders failed", "err", err)
+		http.Error(w, "Ошибка экспорта", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="orders.csv"`)
+	// BOM for Excel UTF-8 compatibility
+	w.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	cw := csv.NewWriter(w)
+	cw.Write([]string{"ID", "UserID", "Status", "TotalAmount", "PaymentTxID", "CreatedAt"})
+	for _, o := range orders {
+		txID := ""
+		if o.PaymentTxID != nil {
+			txID = *o.PaymentTxID
+		}
+		cw.Write([]string{
+			strconv.FormatInt(o.ID, 10),
+			strconv.FormatInt(o.UserID, 10),
+			string(o.Status),
+			fmt.Sprintf("%.2f", o.TotalAmount),
+			txID,
+			o.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	cw.Flush()
 }
 
 // POST /admin/orders/{id}/status
@@ -456,8 +532,15 @@ func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
 	if page <= 0 {
 		page = 1
 	}
-	users, total, _ := h.userRepo.List(20, (page-1)*20)
-	h.Render(w, r, "admin_users.html", map[string]any{"Users": users, "Total": total, "Page": page})
+	users, total, err := h.userRepo.List(20, (page-1)*20)
+	if err != nil {
+		slog.Error("admin: list users failed", "err", err)
+	}
+	totalPages := (total + 20 - 1) / 20
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	h.Render(w, r, "admin_users.html", map[string]any{"Users": users, "Total": total, "Page": page, "TotalPages": totalPages})
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

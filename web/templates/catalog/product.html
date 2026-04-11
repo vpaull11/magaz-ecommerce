@@ -103,8 +103,13 @@
 
     <div class="review-list">
       <!-- We load reviews dynamically or just show it if server provides it. Since handler is not passing reviews yet, let's keep it simple for now -->
-      <div class="mt-2 text-muted">Чтобы увидеть все отзывы, подождите обновление системы.</div>
     </div>
+  </div>
+
+  <!-- Recently Viewed (populated by JS from localStorage) -->
+  <div class="recently-viewed" id="recently-viewed">
+    <h3 class="recently-viewed__title">Вы недавно смотрели</h3>
+    <div class="recently-viewed__grid"></div>
   </div>
 </div>
 {{end}}

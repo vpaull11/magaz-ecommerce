@@ -139,6 +139,10 @@ func (s *ProductService) Delete(id int64) error {
 	return s.products.Delete(id)
 }
 
+func (s *ProductService) CountLowStock(threshold int) (int, error) {
+	return s.products.CountLowStock(threshold)
+}
+
 // SafeFilename sanitises an uploaded file name to prevent path traversal.
 func SafeFilename(header *multipart.FileHeader) string {
 	name := filepath.Base(header.Filename)

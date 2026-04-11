@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_tx_order;
+DROP TABLE IF EXISTS transactions CASCADE;

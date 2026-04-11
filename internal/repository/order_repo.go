@@ -135,3 +135,21 @@ func scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	}
 	return orders, rows.Err()
 }
+
+// OrderStats holds aggregated stats for the admin dashboard.
+type OrderStats struct {
+	Revenue30d float64
+	Orders30d  int
+}
+
+// Stats returns aggregated order metrics for the last 30 days.
+func (r *OrderRepository) Stats() (*OrderStats, error) {
+	s := &OrderStats{}
+	err := r.db.QueryRow(
+		`SELECT COALESCE(SUM(total_amount), 0), COUNT(*)
+		 FROM orders
+		 WHERE created_at >= NOW() - INTERVAL '30 days'
+		   AND status IN ('paid', 'shipped', 'done')`,
+	).Scan(&s.Revenue30d, &s.Orders30d)
+	return s, err
+}

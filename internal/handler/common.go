@@ -47,6 +47,7 @@ var pageMap = []struct{ name, path string }{
 	{"admin_attrs.html", "admin/admin_attrs.html"},
 	{"admin_settings.html", "admin/admin_settings.html"},
 	{"wishlist.html", "account/wishlist.html"},
+	{"error.html", "error.html"},
 }
 
 func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, settingsSvc *service.SettingsService, tmplDir string) (*Base, error) {
@@ -194,6 +195,16 @@ func (b *Base) Flash(w http.ResponseWriter, r *http.Request, msg, kind string) {
 // Redirect is a helper for http.Redirect with 302.
 func Redirect(w http.ResponseWriter, r *http.Request, url string) {
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+// RenderError renders a beautiful error page with the given status code.
+func (b *Base) RenderError(w http.ResponseWriter, r *http.Request, status int, title, message string) {
+	data := map[string]any{
+		"Code":    status,
+		"Title":   title,
+		"Message": message,
+	}
+	b.render(w, r, "error.html", data, status)
 }
 
 // SessionUserID reads the user ID from the gorilla session.

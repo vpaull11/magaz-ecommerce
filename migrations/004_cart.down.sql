@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_cart_user;
+DROP TABLE IF EXISTS cart_items CASCADE;

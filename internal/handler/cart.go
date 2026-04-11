@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -73,7 +74,10 @@ func (h *CartHandler) AddAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summary, _ := h.cartSvc.Get(u.ID)
+	summary, err := h.cartSvc.Get(u.ID)
+	if err != nil {
+		slog.Error("cart: get summary after add failed", "err", err, "user_id", u.ID)
+	}
 	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
@@ -98,7 +102,10 @@ func (h *CartHandler) UpdateAPI(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": err.Error()})
 		return
 	}
-	summary, _ := h.cartSvc.Get(u.ID)
+	summary, err := h.cartSvc.Get(u.ID)
+	if err != nil {
+		slog.Error("cart: get summary after update failed", "err", err, "user_id", u.ID)
+	}
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "cart_count": summary.Count, "cart_total": summary.Total})
 }
 
@@ -112,8 +119,13 @@ func (h *CartHandler) RemoveAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	_ = h.cartSvc.Remove(u.ID, req.ProductID)
-	summary, _ := h.cartSvc.Get(u.ID)
+	if err := h.cartSvc.Remove(u.ID, req.ProductID); err != nil {
+		slog.Error("cart: remove failed", "err", err, "user_id", u.ID, "product_id", req.ProductID)
+	}
+	summary, err := h.cartSvc.Get(u.ID)
+	if err != nil {
+		slog.Error("cart: get summary after remove failed", "err", err, "user_id", u.ID)
+	}
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "cart_count": summary.Count, "cart_total": summary.Total})
 }
 

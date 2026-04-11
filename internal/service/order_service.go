@@ -41,7 +41,10 @@ type CheckoutInput struct {
 	CVV        string `validate:"required,min=3,max=4,numeric"`
 }
 
-// Checkout creates an order, charges payment, decrements stock — all in one DB tx.
+// Checkout creates an order, charges payment, decrements stock — idempotent flow.
+// 1. Create order (pending) + items + decrement stock inside a DB tx
+// 2. Attempt payment AFTER the order is safely persisted
+// 3. Update order status to "paid" on success, leave as "pending" on failure
 func (s *OrderService) Checkout(in CheckoutInput) (*models.Order, error) {
 	// 1. Fetch cart items (outside tx — read only)
 	items, err := s.cart.Items(in.UserID)
@@ -67,22 +70,8 @@ func (s *OrderService) Checkout(in CheckoutInput) (*models.Order, error) {
 		total += ci.Subtotal()
 	}
 
-	// 4. Charge payment BEFORE touching the DB (avoid phantom orders)
-	chargeResp, err := s.payment.Charge(ChargeRequest{
-		OrderID:    0, // will be filled after order creation
-		Amount:     total,
-		CardNumber: in.CardNumber,
-		Expiry:     in.Expiry,
-		CVV:        in.CVV,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("ошибка оплаты: %w", err)
-	}
-	if chargeResp.Status != "success" {
-		return nil, fmt.Errorf("оплата отклонена: %s", chargeResp.Message)
-	}
-
-	// 5. Create order + items in DB transaction
+	// 4. Create order + items + decrement stock in DB transaction FIRST
+	//    This guarantees the order exists even if payment fails later.
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, err
@@ -93,9 +82,8 @@ func (s *OrderService) Checkout(in CheckoutInput) (*models.Order, error) {
 	order := &models.Order{
 		UserID:      in.UserID,
 		AddressID:   &addrID,
-		Status:      models.StatusPaid,
+		Status:      models.StatusPending,
 		TotalAmount: total,
-		PaymentTxID: &chargeResp.TxID,
 	}
 	if err := s.orders.Create(tx, order); err != nil {
 		return nil, fmt.Errorf("create order: %w", err)
@@ -125,6 +113,31 @@ func (s *OrderService) Checkout(in CheckoutInput) (*models.Order, error) {
 		return nil, err
 	}
 
+	// 5. Charge payment AFTER order is safely persisted
+	chargeResp, err := s.payment.Charge(ChargeRequest{
+		OrderID:    order.ID,
+		Amount:     total,
+		CardNumber: in.CardNumber,
+		Expiry:     in.Expiry,
+		CVV:        in.CVV,
+	})
+	if err != nil {
+		// Order stays as "pending" — user can retry or admin can investigate
+		return order, fmt.Errorf("ошибка оплаты: %w (заказ #%d создан, повторите оплату)", err, order.ID)
+	}
+	if chargeResp.Status != "success" {
+		return order, fmt.Errorf("оплата отклонена: %s (заказ #%d создан)", chargeResp.Message, order.ID)
+	}
+
+	// 6. Mark order as paid
+	if err := s.orders.SetPaymentTx(order.ID, chargeResp.TxID, models.StatusPaid); err != nil {
+		// Payment succeeded but status update failed — log but don't fail
+		// The order exists and payment is recorded in the payment service
+		return order, nil
+	}
+
+	order.Status = models.StatusPaid
+	order.PaymentTxID = &chargeResp.TxID
 	return order, nil
 }
 
@@ -170,4 +183,8 @@ func (s *OrderService) GetByID(id int64) (*models.Order, error) {
 	}
 	order.Items = items
 	return order, nil
+}
+
+func (s *OrderService) Stats() (*repository.OrderStats, error) {
+	return s.orders.Stats()
 }

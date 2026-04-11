@@ -204,3 +204,80 @@ func (r *ProductRepository) DecrementStock(tx *sql.Tx, productID int64, qty int)
 	}
 	return nil
 }
+
+// Search performs a SQL ILIKE search on product name and description.
+// Returns up to `limit` active products matching the query.
+func (r *ProductRepository) Search(query string, limit int) ([]*models.Product, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	pattern := "%" + query + "%"
+	rows, err := r.db.Query(
+		productSelectSQL+` WHERE p.is_active = TRUE AND (p.name ILIKE $1 OR p.description ILIKE $1) ORDER BY p.name LIMIT $2`,
+		pattern, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var products []*models.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
+// FindByIDs loads products by a list of IDs (preserves order of input IDs).
+func (r *ProductRepository) FindByIDs(ids []int64) ([]*models.Product, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	query := productSelectSQL + fmt.Sprintf(
+		" WHERE p.id IN (%s) AND p.is_active = TRUE",
+		strings.Join(placeholders, ","),
+	)
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	byID := make(map[int64]*models.Product)
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		byID[p.ID] = p
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// Preserve input order
+	result := make([]*models.Product, 0, len(ids))
+	for _, id := range ids {
+		if p, ok := byID[id]; ok {
+			result = append(result, p)
+		}
+	}
+	return result, nil
+}
+
+// CountLowStock returns the number of active products with stock <= threshold.
+func (r *ProductRepository) CountLowStock(threshold int) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM products WHERE is_active = TRUE AND stock <= $1`,
+		threshold,
+	).Scan(&count)
+	return count, err
+}

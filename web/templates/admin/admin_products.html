@@ -18,7 +18,7 @@
           <td><a href="/catalog/item/{{.ID}}">{{.Name}}</a></td>
           <td>{{.CategoryName}}</td>
           <td>{{printf "%.2f" .Price}} ₽</td>
-          <td>{{.Stock}}</td>
+          <td>{{if le .Stock 5}}<span style="color:var(--c-red)">{{.Stock}}</span>{{else}}{{.Stock}}{{end}}</td>
           <td>{{if .IsActive}}<span class="badge badge--green">Активен</span>{{else}}<span class="badge badge--red">Скрыт</span>{{end}}</td>
           <td class="table-actions">
             <a href="/admin/products/edit?id={{.ID}}" class="btn btn--sm btn--outline">Изм.</a>
@@ -32,6 +32,21 @@
         </tbody>
       </table>
       </div><!-- /table-wrapper -->
+      {{if gt .Data.TotalPages 1}}
+      <div class="pagination mt-4">
+        {{$page := .Data.Page}}
+        {{$total := .Data.TotalPages}}
+        {{if gt $page 1}}<a href="?page={{sub $page 1}}" class="pagination__link">← Назад</a>{{end}}
+        {{range seq 1 $total}}
+          {{if eq . $page}}
+            <span class="pagination__link pagination__link--active">{{.}}</span>
+          {{else}}
+            <a href="?page={{.}}" class="pagination__link">{{.}}</a>
+          {{end}}
+        {{end}}
+        {{if lt $page $total}}<a href="?page={{add $page 1}}" class="pagination__link">Вперёд →</a>{{end}}
+      </div>
+      {{end}}
     </div>
   </div>
 </div>

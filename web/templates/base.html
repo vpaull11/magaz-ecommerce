@@ -145,7 +145,47 @@
 <!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
 <footer class="footer">
   <div class="container">
-    <p>© 2025 Magaz. Все права защищены.</p>
+    <div class="footer-grid">
+      <div class="footer-column">
+        <h4 class="footer-column__title">Магазин</h4>
+        <ul class="footer-links">
+          <li><a href="/catalog">Каталог</a></li>
+          <li><a href="/">Главная</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4 class="footer-column__title">Аккаунт</h4>
+        <ul class="footer-links">
+          <li><a href="/auth/login">Войти</a></li>
+          <li><a href="/auth/register">Регистрация</a></li>
+          <li><a href="/account/orders">Мои заказы</a></li>
+          <li><a href="/account/wishlist">Избранное</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4 class="footer-column__title">Поддержка</h4>
+        <ul class="footer-links">
+          <li><a href="#">Доставка и оплата</a></li>
+          <li><a href="#">Возврат товара</a></li>
+          <li><a href="#">Политика конфиденциальности</a></li>
+          <li><a href="#">Публичная оферта</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4 class="footer-column__title">Контакты</h4>
+        <ul class="footer-links">
+          <li>📞 +7 (999) 123-45-67</li>
+          <li>✉️ info@magaz.ru</li>
+        </ul>
+        <div class="footer-social">
+          <a href="#" class="footer-social__link" aria-label="Telegram">📨</a>
+          <a href="#" class="footer-social__link" aria-label="VK">🔗</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 {{.SiteName}}. Все права защищены.</p>
+    </div>
   </div>
 </footer>
 
@@ -209,78 +249,7 @@
   </div>
 </nav>
 
-<script src="/static/js/main.js?v=5"></script>
-<script>
-// ─── Mobile Menu ──────────────────────────────────────────────────────────
-(function() {
-  const burger  = document.getElementById('nav-burger');
-  const menu    = document.getElementById('nav-mobile-menu');
-  const overlay = document.getElementById('nav-mobile-overlay');
-  const closeBtn= document.getElementById('nav-mobile-close');
-
-  function openMenu() {
-    menu.classList.add('open');
-    overlay.classList.add('open');
-    burger.classList.add('open');
-    burger.setAttribute('aria-expanded', 'true');
-    burger.innerHTML = '✕';
-    document.body.style.overflow = 'hidden';
-  }
-  function closeMenu() {
-    menu.classList.remove('open');
-    overlay.classList.remove('open');
-    burger.classList.remove('open');
-    burger.setAttribute('aria-expanded', 'false');
-    burger.innerHTML = '☰';
-    document.body.style.overflow = '';
-  }
-
-  burger && burger.addEventListener('click', () => menu.classList.contains('open') ? closeMenu() : openMenu());
-  closeBtn && closeBtn.addEventListener('click', closeMenu);
-  overlay && overlay.addEventListener('click', closeMenu);
-
-  // Close on Escape
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-
-  // Swipe left to close
-  let touchStartX = 0;
-  menu && menu.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  menu && menu.addEventListener('touchend', e => {
-    if (e.changedTouches[0].clientX - touchStartX < -60) closeMenu();
-  }, { passive: true });
-
-  // ─── Bottom nav: mark active tab ─────────────────────────────────────
-  const path = window.location.pathname;
-  document.querySelectorAll('.bottom-nav__item[data-path]').forEach(el => {
-    const p = el.dataset.path;
-    if (p === '/' ? path === '/' : path.startsWith(p)) {
-      el.classList.add('active');
-    }
-  });
-
-  // ─── Mobile search toggle ─────────────────────────────────────────────
-  const searchBtn = document.getElementById('bottom-nav-search-btn');
-  const searchBox = document.querySelector('.search-container');
-  if (searchBtn && searchBox) {
-    searchBtn.addEventListener('click', () => {
-      searchBox.classList.toggle('mobile-open');
-      if (searchBox.classList.contains('mobile-open')) {
-        searchBox.querySelector('input')?.focus();
-      }
-    });
-  }
-
-  // ─── Mobile first-visit hint ──────────────────────────────────────────
-  const isMobile = window.matchMedia('(max-width: 640px)').matches;
-  if (isMobile && !sessionStorage.getItem('mob_hint_shown')) {
-    sessionStorage.setItem('mob_hint_shown', '1');
-    setTimeout(() => {
-      if (window.showToast) {
-        window.showToast('📱 Сайт оптимизирован для мобильных устройств', 'success');
-      }
-    }, 1200);
-  }
-})();
-</script>
+<script src="/static/js/main.js?v=6"></script>
 </body>
 </html>
+

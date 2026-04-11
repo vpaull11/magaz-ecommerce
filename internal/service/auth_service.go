@@ -66,6 +66,11 @@ func (s *AuthService) Register(in RegisterInput) (*models.User, error) {
 		return nil, err
 	}
 
+	// Validate email format
+	if err := validation.ValidateEmail(in.Email); err != nil {
+		return nil, err
+	}
+
 	_, err := s.users.FindByEmail(in.Email)
 	if err == nil {
 		return nil, ErrEmailTaken

@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_addresses_user;
+DROP TABLE IF EXISTS addresses CASCADE;

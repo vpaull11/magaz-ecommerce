@@ -16,13 +16,14 @@ import (
 
 type CatalogHandler struct {
 	*Base
-	productSvc *service.ProductService
-	catSvc     *service.CategoryService
-	catRepo    *repository.CategoryRepository
+	productSvc  *service.ProductService
+	catSvc      *service.CategoryService
+	catRepo     *repository.CategoryRepository
+	productRepo *repository.ProductRepository
 }
 
-func NewCatalogHandler(base *Base, productSvc *service.ProductService, catSvc *service.CategoryService, catRepo *repository.CategoryRepository) *CatalogHandler {
-	return &CatalogHandler{Base: base, productSvc: productSvc, catSvc: catSvc, catRepo: catRepo}
+func NewCatalogHandler(base *Base, productSvc *service.ProductService, catSvc *service.CategoryService, catRepo *repository.CategoryRepository, productRepo *repository.ProductRepository) *CatalogHandler {
+	return &CatalogHandler{Base: base, productSvc: productSvc, catSvc: catSvc, catRepo: catRepo, productRepo: productRepo}
 }
 
 // GET /
@@ -120,12 +121,12 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 func (h *CatalogHandler) Product(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
-		http.NotFound(w, r)
+		h.RenderError(w, r, http.StatusNotFound, "Страница не найдена", "Запрошенный товар не существует.")
 		return
 	}
 	p, err := h.productSvc.GetByID(id)
 	if err != nil {
-		http.NotFound(w, r)
+		h.RenderError(w, r, http.StatusNotFound, "Товар не найден", "Запрошенный товар не существует или был удалён.")
 		return
 	}
 	h.Render(w, r, "product.html", p)
@@ -138,38 +139,65 @@ func (h *CatalogHandler) SearchAPI(w http.ResponseWriter, r *http.Request) {
 		chttpJSON(w, []any{}) // Return empty
 		return
 	}
-	
-	// Since we don't have a specific search method in repo yet, we'll fetch all and filter in memory for simplicity.
-	// In production, we'd add an ILIKE query.
-	page, err := h.productSvc.List(service.ProductFilter{Page: 1, PerPage: 100})
+
+	products, err := h.productRepo.Search(query, 5)
 	if err != nil {
 		chttpJSON(w, []any{})
 		return
 	}
-	
+
 	var results []map[string]any
-	for _, p := range page.Products {
-		if containsIgnoreCase(p.Name, query) || containsIgnoreCase(p.Description, query) {
-			results = append(results, map[string]any{
-				"id": p.ID,
-				"name": p.Name,
-				"price": p.Price,
-				"image_url": p.ImageURL,
-			})
-			if len(results) >= 5 {
-				break
-			}
-		}
+	for _, p := range products {
+		results = append(results, map[string]any{
+			"id":        p.ID,
+			"name":      p.Name,
+			"price":     p.Price,
+			"image_url": p.ImageURL,
+		})
 	}
 	if results == nil {
 		results = []map[string]any{}
 	}
-	
+
 	chttpJSON(w, results)
 }
 
-func containsIgnoreCase(s, substr string) bool {
-	return len(substr) > 0 && len(s) > 0 && (strings.Contains(strings.ToLower(s), strings.ToLower(substr)))
+// GET /api/products/by-ids?ids=1,2,3
+func (h *CatalogHandler) RecentlyViewedAPI(w http.ResponseWriter, r *http.Request) {
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		chttpJSON(w, []any{})
+		return
+	}
+	parts := strings.Split(idsParam, ",")
+	var ids []int64
+	for _, s := range parts {
+		id, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
+		if err == nil && id > 0 {
+			ids = append(ids, id)
+		}
+		if len(ids) >= 10 {
+			break
+		}
+	}
+	products, err := h.productRepo.FindByIDs(ids)
+	if err != nil {
+		chttpJSON(w, []any{})
+		return
+	}
+	var results []map[string]any
+	for _, p := range products {
+		results = append(results, map[string]any{
+			"id":        p.ID,
+			"name":      p.Name,
+			"price":     p.Price,
+			"image_url": p.ImageURL,
+		})
+	}
+	if results == nil {
+		results = []map[string]any{}
+	}
+	chttpJSON(w, results)
 }
 
 func chttpJSON(w http.ResponseWriter, v any) {

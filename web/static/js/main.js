@@ -481,3 +481,128 @@ document.addEventListener('click', async (e) => {
   const pid = parseInt(btn.dataset.productId);
   if (pid) await ajaxAddToCart(pid, 1, btn);
 });
+
+/* ==========================================================================
+   Mobile Menu (moved from inline script for CSP compliance)
+   ========================================================================== */
+(function() {
+  const burger  = document.getElementById('nav-burger');
+  const menu    = document.getElementById('nav-mobile-menu');
+  const overlay = document.getElementById('nav-mobile-overlay');
+  const closeBtn= document.getElementById('nav-mobile-close');
+
+  function openMenu() {
+    menu.classList.add('open');
+    overlay.classList.add('open');
+    burger.classList.add('open');
+    burger.setAttribute('aria-expanded', 'true');
+    burger.innerHTML = '✕';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    menu.classList.remove('open');
+    overlay.classList.remove('open');
+    burger.classList.remove('open');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.innerHTML = '☰';
+    document.body.style.overflow = '';
+  }
+
+  burger && burger.addEventListener('click', () => menu.classList.contains('open') ? closeMenu() : openMenu());
+  closeBtn && closeBtn.addEventListener('click', closeMenu);
+  overlay && overlay.addEventListener('click', closeMenu);
+
+  // Close on Escape
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+  // Swipe left to close
+  let touchStartX = 0;
+  menu && menu.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  menu && menu.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientX - touchStartX < -60) closeMenu();
+  }, { passive: true });
+
+  // ─── Bottom nav: mark active tab ─────────────────────────────────────
+  const path = window.location.pathname;
+  document.querySelectorAll('.bottom-nav__item[data-path]').forEach(el => {
+    const p = el.dataset.path;
+    if (p === '/' ? path === '/' : path.startsWith(p)) {
+      el.classList.add('active');
+    }
+  });
+
+  // ─── Mobile search toggle ─────────────────────────────────────────────
+  const searchBtn = document.getElementById('bottom-nav-search-btn');
+  const searchBox = document.querySelector('.search-container');
+  if (searchBtn && searchBox) {
+    searchBtn.addEventListener('click', () => {
+      searchBox.classList.toggle('mobile-open');
+      if (searchBox.classList.contains('mobile-open')) {
+        searchBox.querySelector('input')?.focus();
+      }
+    });
+  }
+
+  // ─── Mobile first-visit hint ──────────────────────────────────────────
+  const isMobile = window.matchMedia('(max-width: 640px)').matches;
+  if (isMobile && !sessionStorage.getItem('mob_hint_shown')) {
+    sessionStorage.setItem('mob_hint_shown', '1');
+    setTimeout(() => {
+      if (window.showToast) {
+        window.showToast('📱 Сайт оптимизирован для мобильных устройств', 'success');
+      }
+    }, 1200);
+  }
+})();
+
+/* ==========================================================================
+   Recently Viewed Products (localStorage-based)
+   ========================================================================== */
+(function() {
+  const STORAGE_KEY = 'magaz_recently_viewed';
+  const MAX_ITEMS   = 10;
+
+  // Track current product page visit
+  const match = window.location.pathname.match(/^\/catalog\/item\/(\d+)$/);
+  if (match) {
+    const pid = parseInt(match[1]);
+    let viewed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    viewed = viewed.filter(id => id !== pid); // Remove if already present
+    viewed.unshift(pid);                       // Add to front
+    if (viewed.length > MAX_ITEMS) viewed = viewed.slice(0, MAX_ITEMS);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(viewed));
+  }
+
+  // Render recently viewed section on product pages
+  const container = document.getElementById('recently-viewed');
+  if (container) {
+    let viewed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    // Exclude current product
+    if (match) {
+      viewed = viewed.filter(id => id !== parseInt(match[1]));
+    }
+    if (viewed.length > 0) {
+      fetch('/api/products/by-ids?ids=' + viewed.slice(0, 6).join(','))
+        .then(r => r.json())
+        .then(products => {
+          if (!products || products.length === 0) return;
+          container.style.display = 'block';
+          const grid = container.querySelector('.recently-viewed__grid');
+          if (!grid) return;
+          products.forEach(p => {
+            const card = document.createElement('a');
+            card.href = '/catalog/item/' + p.id;
+            card.className = 'recently-viewed__card';
+            card.innerHTML = `
+              <img src="${p.image_url || '/static/img/placeholder.png'}" alt="" class="recently-viewed__img">
+              <div class="recently-viewed__name">${p.name}</div>
+              <div class="recently-viewed__price">${parseFloat(p.price).toFixed(2)} ₽</div>
+            `;
+            grid.appendChild(card);
+          });
+        })
+        .catch(() => {}); // Silently fail
+    }
+  }
+})();
+

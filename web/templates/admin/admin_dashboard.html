@@ -7,9 +7,32 @@
       <h1 class="page-title">Дашборд</h1>
       <div class="stats-grid">
         <div class="stat-card">
+          <div class="stat-card__icon">📦</div>
           <div class="stat-card__val">{{.Data.Total}}</div>
           <div class="stat-card__label">Заказов всего</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-card__icon">💰</div>
+          <div class="stat-card__val">{{printf "%.2f" .Data.Revenue30d}} ₽</div>
+          <div class="stat-card__label">Выручка за 30 дней</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__icon">🛒</div>
+          <div class="stat-card__val">{{.Data.Orders30d}}</div>
+          <div class="stat-card__label">Заказов за 30 дней</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__icon">👥</div>
+          <div class="stat-card__val">{{.Data.UserCount}}</div>
+          <div class="stat-card__label">Пользователей</div>
+        </div>
+        {{if gt .Data.LowStockCount 0}}
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__icon">⚠️</div>
+          <div class="stat-card__val">{{.Data.LowStockCount}}</div>
+          <div class="stat-card__label">Товаров с низким остатком</div>
+        </div>
+        {{end}}
       </div>
       <div class="card mt-6">
         <h3 class="card__title">Последние заказы</h3>

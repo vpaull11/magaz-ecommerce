@@ -4,7 +4,10 @@
   <div class="admin-layout">
     {{template "admin-nav" .}}
     <div class="admin-content">
-      <h1 class="page-title">Заказы ({{.Data.Total}})</h1>
+      <div class="admin-page-header">
+        <h1 class="page-title">Заказы ({{.Data.Total}})</h1>
+        <a href="/admin/orders/export" class="btn btn--sm btn--outline">📥 Экспорт CSV</a>
+      </div>
       <div class="table-wrapper">
       <table class="table">
         <thead><tr><th>#</th><th>Пользователь</th><th>Сумма</th><th>Статус</th><th>Дата</th><th>Действие</th></tr></thead>
@@ -33,6 +36,21 @@
         </tbody>
       </table>
       </div><!-- /table-wrapper -->
+      {{if gt .Data.TotalPages 1}}
+      <div class="pagination mt-4">
+        {{$page := .Data.Page}}
+        {{$total := .Data.TotalPages}}
+        {{if gt $page 1}}<a href="?page={{sub $page 1}}" class="pagination__link">← Назад</a>{{end}}
+        {{range seq 1 $total}}
+          {{if eq . $page}}
+            <span class="pagination__link pagination__link--active">{{.}}</span>
+          {{else}}
+            <a href="?page={{.}}" class="pagination__link">{{.}}</a>
+          {{end}}
+        {{end}}
+        {{if lt $page $total}}<a href="?page={{add $page 1}}" class="pagination__link">Вперёд →</a>{{end}}
+      </div>
+      {{end}}
     </div>
   </div>
 </div>

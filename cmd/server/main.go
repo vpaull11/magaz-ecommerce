@@ -85,7 +85,7 @@ func main() {
 
 	// ─── Handlers ──────────────────────────────────────────────────────────
 	authH     := handler.NewAuthHandler(base, authSvc)
-	catalogH  := handler.NewCatalogHandler(base, productSvc, catSvc, categoryRepo)
+	catalogH  := handler.NewCatalogHandler(base, productSvc, catSvc, categoryRepo, productRepo)
 	wishlistH := handler.NewWishlistHandler(base, wishlistRepo)
 	reviewH   := handler.NewReviewHandler(base, reviewRepo)
 	cartH     := handler.NewCartHandler(base, cartSvc, addressRepo)
@@ -121,6 +121,16 @@ func main() {
 	r.Use(middleware.LoadUser(store, authSvc))
 	r.Use(csrfMiddleware)
 
+	// Health check — no auth, no CSRF, no rate limits needed above
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		if err := database.Ping(); err != nil {
+			http.Error(w, "db down", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("ok"))
+	})
+
 	// Static files — no body size limit needed (GET-only)
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadsDir))))
@@ -128,7 +138,8 @@ func main() {
 	// API routes (JSON responses, smaller body limit)
 	r.Route("/api", func(r chi.Router) {
 		r.Use(middleware.MaxBodySize(32 * 1024))
-		r.Get("/search", catalogH.SearchAPI) // Live search
+		r.Get("/search", catalogH.SearchAPI)              // Live search
+		r.Get("/products/by-ids", catalogH.RecentlyViewedAPI) // Recently viewed
 		
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAuth)
@@ -206,6 +217,7 @@ func main() {
 		r.Post("/admin/products/delete", adminH.DeleteProduct)
 		r.Post("/admin/products/{id}/attrs", adminH.SaveProductAttrs)
 		r.Get("/admin/orders", adminH.Orders)
+		r.Get("/admin/orders/export", adminH.OrdersExport)
 		r.Post("/admin/orders/status", adminH.UpdateOrderStatus)
 		r.Get("/admin/users", adminH.Users)
 		// Categories
