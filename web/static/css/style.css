@@ -793,7 +793,7 @@ input[type="number"].qty-input::-webkit-outer-spin-button {
   transition: all var(--transition);
 }
 .stat-card:hover { border-color: rgba(0,200,255,.35); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 0 16px rgba(0,200,255,.1); }
-.stat-card__val   { font-size: 2.2rem; font-weight: 900; color: var(--c-cyan); text-shadow: var(--glow-cyan); }
+.stat-card__val   { font-size: clamp(1.2rem, 4vw, 2.2rem); font-weight: 900; color: var(--c-cyan); text-shadow: var(--glow-cyan); word-break: break-word; }
 .stat-card__label { font-size: .8rem; color: var(--c-muted); margin-top: .25rem; text-transform: uppercase; letter-spacing: .07em; }
 .current-img { margin-bottom: .5rem; }
 .inline-form { display: inline; }

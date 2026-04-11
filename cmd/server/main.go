@@ -59,9 +59,9 @@ func main() {
 		os.Exit(1)
 	}
 	authSvc    := service.NewAuthService(userRepo)
-	productSvc := service.NewProductService(productRepo, categoryRepo)
-	cartSvc    := service.NewCartService(cartRepo, productRepo)
 	catSvc     := service.NewCategoryService(categoryRepo, attrRepo)
+	productSvc := service.NewProductService(productRepo, categoryRepo, catSvc)
+	cartSvc    := service.NewCartService(cartRepo, productRepo)
 	payClient  := service.NewPaymentClient(cfg.PaymentURL, cfg.PaymentSecret)
 	orderSvc   := service.NewOrderService(orderRepo, productRepo, cartRepo, addressRepo, payClient, database)
 

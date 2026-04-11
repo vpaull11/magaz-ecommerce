@@ -58,6 +58,24 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, settings
 		"string": func(v any) string { return fmt.Sprint(v) },
 		"statusLabel": func(s models.OrderStatus) string { return s.Label() },
 		"addrFull": func(a *models.Address) string { return a.Full() },
+		"formatMoney": func(v float64) string {
+			// Format as "157 000" (space-separated thousands, no decimals)
+			intPart := int64(v)
+			s := fmt.Sprintf("%d", intPart)
+			// Insert spaces every 3 digits from right
+			n := len(s)
+			if n <= 3 {
+				return s
+			}
+			var result []byte
+			for i, ch := range s {
+				if i > 0 && (n-i)%3 == 0 {
+					result = append(result, ' ')
+				}
+				result = append(result, byte(ch))
+			}
+			return string(result)
+		},
 		"truncate": func(s string, n int) string {
 			if len([]rune(s)) <= n {
 				return s

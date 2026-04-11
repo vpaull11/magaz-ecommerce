@@ -12,13 +12,15 @@ import (
 type ProductService struct {
 	products   *repository.ProductRepository
 	categories *repository.CategoryRepository
+	catSvc     *CategoryService
 }
 
 func NewProductService(
 	products *repository.ProductRepository,
 	categories *repository.CategoryRepository,
+	catSvc *CategoryService,
 ) *ProductService {
-	return &ProductService{products: products, categories: categories}
+	return &ProductService{products: products, categories: categories, catSvc: catSvc}
 }
 
 type ProductFilter struct {
@@ -51,9 +53,18 @@ func (s *ProductService) List(f ProductFilter) (*ProductPage, error) {
 	if err != nil {
 		return nil, err
 	}
-	cats, err := s.categories.List()
-	if err != nil {
-		return nil, err
+	// Use cached category data from CategoryService (avoids mutating shared pointers)
+	var cats []*models.Category
+	var tree []*models.Category
+	if s.catSvc != nil {
+		cats, _ = s.catSvc.GetFlat()
+		tree, _ = s.catSvc.GetTree()
+	} else {
+		cats, err = s.categories.List()
+		if err != nil {
+			return nil, err
+		}
+		tree = repository.BuildTree(cats)
 	}
 	totalPages := (total + f.PerPage - 1) / f.PerPage
 	if totalPages < 1 {
@@ -62,7 +73,7 @@ func (s *ProductService) List(f ProductFilter) (*ProductPage, error) {
 	return &ProductPage{
 		Products:     products,
 		Categories:   cats,
-		CategoryTree: repository.BuildTree(cats),
+		CategoryTree: tree,
 		Total:        total,
 		Page:         f.Page,
 		TotalPages:   totalPages,
