@@ -127,39 +127,65 @@ func (h *AdminHandler) Categories(w http.ResponseWriter, r *http.Request) {
 		byID[c.ID] = c
 	}
 
-	// Parent name map for table display
+	// Compute depth level for each category (parent must come before child in flat list)
+	levels := make(map[int64]int, len(flat))
+	for _, c := range flat {
+		if c.ParentID == nil {
+			levels[c.ID] = 0
+		} else {
+			levels[c.ID] = levels[*c.ParentID] + 1
+		}
+	}
+
+	// Build parents name breadcrumb path: "Корень / Родитель / Категория"
+	var pathName func(c *models.Category) string
+	pathName = func(c *models.Category) string {
+		if c.ParentID == nil {
+			return c.Name
+		}
+		if p, ok := byID[*c.ParentID]; ok {
+			return pathName(p) + " / " + c.Name
+		}
+		return c.Name
+	}
 	parentNames := make(map[int64]string, len(flat))
 	for _, c := range flat {
 		if c.ParentID != nil {
 			if p, ok := byID[*c.ParentID]; ok {
-				parentNames[c.ID] = p.Name
+				parentNames[c.ID] = pathName(p)
 			}
 		} else {
 			parentNames[c.ID] = "—"
 		}
 	}
 
-	// Build ordered list: each root followed immediately by its children
-	// (children map: parentID → []*Category)
-	children := make(map[int64][]*models.Category)
+	// DFS ordering: each root followed by its full subtree (recursive)
+	childrenOf := make(map[int64][]*models.Category)
 	var roots []*models.Category
 	for _, c := range flat {
 		if c.ParentID == nil {
 			roots = append(roots, c)
 		} else {
-			children[*c.ParentID] = append(children[*c.ParentID], c)
+			childrenOf[*c.ParentID] = append(childrenOf[*c.ParentID], c)
 		}
 	}
 	ordered := make([]*models.Category, 0, len(flat))
+	var dfsCollect func(c *models.Category)
+	dfsCollect = func(c *models.Category) {
+		ordered = append(ordered, c)
+		for _, child := range childrenOf[c.ID] {
+			dfsCollect(child)
+		}
+	}
 	for _, root := range roots {
-		ordered = append(ordered, root)
-		ordered = append(ordered, children[root.ID]...)
+		dfsCollect(root)
 	}
 
 	errMsg := r.URL.Query().Get("err")
 	h.Render(w, r, "admin_categories.html", map[string]any{
 		"Flat":        ordered,
 		"ParentNames": parentNames,
+		"Levels":      levels,
 		"Error":       errMsg,
 	})
 }

@@ -6,23 +6,26 @@
     <div class="admin-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
         <h1 class="page-title" style="margin:0">Категории товаров</h1>
-        <button class="btn btn--primary btn--sm" onclick="document.getElementById('modal-new-cat').style.display='flex'">+ Новая категория</button>
+        <button class="btn btn--primary btn--sm" id="btn-new-cat">+ Новая категория</button>
       </div>
 
       {{if .Data.Error}}<div class="toast error" style="position:static;margin-bottom:1rem;">{{.Data.Error}}</div>{{end}}
 
       <div class="card">
         <table class="table">
-          <thead><tr><th>Название</th><th>Slug</th><th>Родитель</th><th>Порядок</th><th>Действия</th></tr></thead>
+          <thead><tr><th>Название</th><th>Путь родителя</th><th>Уровень</th><th>Порядок</th><th>Действия</th></tr></thead>
           <tbody>
           {{range .Data.Flat}}
+          {{$level := index $.Data.Levels .ID}}
           <tr>
             <td>
-              {{if .ParentID}}<span style="color:var(--c-muted);margin-right:0.5rem">└─</span>{{end}}
-              <strong>{{.Name}}</strong>
+              {{if gt $level 0}}
+                <span style="color:var(--c-muted);margin-right:0.25rem">{{repeat $level "· "}}</span>
+              {{end}}
+              {{if eq $level 0}}<strong>{{.Name}}</strong>{{else}}<span>{{.Name}}</span>{{end}}
             </td>
-            <td><code style="font-size:0.8rem;opacity:0.7">{{.Slug}}</code></td>
-            <td>{{index $.Data.ParentNames .ID}}</td>
+            <td style="font-size:0.82rem;opacity:0.7">{{index $.Data.ParentNames .ID}}</td>
+            <td><span class="badge badge--{{if eq $level 0}}blue{{else if eq $level 1}}green{{else}}amber{{end}}">{{$level}}</span></td>
             <td>{{.SortOrder}}</td>
             <td style="white-space:nowrap">
               <a href="/admin/categories/{{.ID}}/attrs" class="btn btn--sm btn--outline" style="margin-right:0.25rem">Атрибуты</a>
@@ -50,7 +53,7 @@
 
 <!-- Modal: New Category -->
 <div id="modal-new-cat" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div class="card" style="width:420px;max-width:90vw;padding:2rem">
+  <div class="card" style="width:480px;max-width:95vw;padding:2rem;max-height:90vh;overflow-y:auto">
     <h3 style="margin-top:0">Новая категория</h3>
     <form method="POST" action="/admin/categories/new">
       {{.CSRF}}
@@ -66,7 +69,10 @@
         <label class="form-label">Родительская категория</label>
         <select class="form-input" name="parent_id">
           <option value="">— Корневая —</option>
-          {{range .Data.Flat}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+          {{range .Data.Flat}}
+          {{$level := index $.Data.Levels .ID}}
+          <option value="{{.ID}}">{{repeat $level "· "}}{{.Name}}</option>
+          {{end}}
         </select>
       </div>
       <div class="form-group">
@@ -89,7 +95,7 @@
       </details>
       <div class="form-actions">
         <button class="btn btn--primary" type="submit">Создать</button>
-        <button class="btn btn--outline" type="button" onclick="document.getElementById('modal-new-cat').style.display='none'">Отмена</button>
+        <button class="btn btn--outline" type="button" id="btn-cancel-new">Отмена</button>
       </div>
     </form>
   </div>
@@ -97,7 +103,7 @@
 
 <!-- Modal: Edit Category -->
 <div id="modal-edit-cat" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div class="card" style="width:420px;max-width:90vw;padding:2rem">
+  <div class="card" style="width:480px;max-width:95vw;padding:2rem;max-height:90vh;overflow-y:auto">
     <h3 style="margin-top:0">Редактировать категорию</h3>
     <form id="edit-cat-form" method="POST" action="">
       {{.CSRF}}
@@ -113,7 +119,10 @@
         <label class="form-label">Родительская категория</label>
         <select id="edit-cat-parent" class="form-input" name="parent_id">
           <option value="">— Корневая —</option>
-          {{range .Data.Flat}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+          {{range .Data.Flat}}
+          {{$level := index $.Data.Levels .ID}}
+          <option value="{{.ID}}" data-id="{{.ID}}">{{repeat $level "· "}}{{.Name}}</option>
+          {{end}}
         </select>
       </div>
       <div class="form-group">
@@ -136,31 +145,114 @@
       </details>
       <div class="form-actions">
         <button class="btn btn--primary" type="submit">Сохранить</button>
-        <button class="btn btn--outline" type="button" onclick="document.getElementById('modal-edit-cat').style.display='none'">Отмена</button>
+        <button class="btn btn--outline" type="button" id="btn-cancel-edit">Отмена</button>
       </div>
     </form>
   </div>
 </div>
 
+<style>
+.badge--blue   { background: rgba(103,232,249,0.15); color: #67e8f9; }
+.badge--green  { background: rgba(52,211,153,0.15);  color: #34d399; }
+.badge--amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+</style>
+
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.edit-cat-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+(function() {
+  // Open / close modals
+  document.getElementById('btn-new-cat').addEventListener('click', function() {
+    document.getElementById('modal-new-cat').style.display = 'flex';
+  });
+  document.getElementById('btn-cancel-new').addEventListener('click', function() {
+    document.getElementById('modal-new-cat').style.display = 'none';
+  });
+  document.getElementById('btn-cancel-edit').addEventListener('click', function() {
+    document.getElementById('modal-edit-cat').style.display = 'none';
+  });
+
+  // Close on backdrop click
+  ['modal-new-cat','modal-edit-cat'].forEach(function(id) {
+    document.getElementById(id).addEventListener('click', function(e) {
+      if (e.target === this) this.style.display = 'none';
+    });
+  });
+
+  // Edit button — fill form and disable descendant options to prevent cycles
+  document.querySelectorAll('.edit-cat-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
       const ds = e.currentTarget.dataset;
-      document.getElementById('edit-cat-form').action = '/admin/categories/' + ds.id + '/edit';
-      document.getElementById('edit-cat-name').value = ds.name || '';
-      document.getElementById('edit-cat-slug').value = ds.slug || '';
-      document.getElementById('edit-cat-order').value = ds.order || '0';
+      const editId = ds.id;
+
+      document.getElementById('edit-cat-form').action = '/admin/categories/' + editId + '/edit';
+      document.getElementById('edit-cat-name').value     = ds.name  || '';
+      document.getElementById('edit-cat-slug').value     = ds.slug  || '';
+      document.getElementById('edit-cat-order').value    = ds.order || '0';
       document.getElementById('edit-cat-seo-title').value = ds.seotitle || '';
-      document.getElementById('edit-cat-seo-desc').value = ds.seodesc || '';
-      
+      document.getElementById('edit-cat-seo-desc').value  = ds.seodesc  || '';
+
       const sel = document.getElementById('edit-cat-parent');
-      for (let o of sel.options) { 
-        o.selected = (o.value === ds.parent); 
+      // Disable/enable options: cannot set self or own descendants as parent
+      // We identify descendants by checking the table order — rows between self
+      // and the next same-or-higher-level row are descendants.
+      // Simpler: collect IDs we should block from the rendered table.
+      const blocked = collectDescendantIds(editId);
+      blocked.add(editId); // also block self
+
+      for (let opt of sel.options) {
+        const oid = opt.getAttribute('data-id');
+        if (oid && blocked.has(oid)) {
+          opt.disabled = true;
+          opt.style.opacity = '0.35';
+        } else {
+          opt.disabled = false;
+          opt.style.opacity = '';
+        }
+        // Select current parent
+        opt.selected = (opt.value === ds.parent && !opt.disabled);
       }
+      // Fallback: if current parent was somehow blocked, select root
+      if (sel.value === '' && ds.parent !== '0' && ds.parent !== '') {
+        // keep root selected
+      }
+
       document.getElementById('modal-edit-cat').style.display = 'flex';
     });
   });
-});
+
+  /**
+   * collectDescendantIds — builds the set of category IDs that are
+   * descendants of `rootId` by walking the DFS-ordered table rows.
+   * Each row carries data-id via the edit button.
+   */
+  function collectDescendantIds(rootId) {
+    const result = new Set();
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+
+    // Build parent→children map from table data attributes
+    const parentOf = {}; // id → parentId
+    rows.forEach(function(row) {
+      const btn = row.querySelector('.edit-cat-btn');
+      if (!btn) return;
+      const id  = btn.dataset.id;
+      const pid = btn.dataset.parent;
+      parentOf[id] = pid;
+    });
+
+    // DFS
+    function dfs(id) {
+      rows.forEach(function(row) {
+        const btn = row.querySelector('.edit-cat-btn');
+        if (!btn) return;
+        const cid = btn.dataset.id;
+        if (parentOf[cid] === id) {
+          result.add(cid);
+          dfs(cid);
+        }
+      });
+    }
+    dfs(rootId);
+    return result;
+  }
+})();
 </script>
 {{end}}

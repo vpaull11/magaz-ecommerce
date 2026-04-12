@@ -58,7 +58,7 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Resolve category slug → IDs (parent + all children)
+	// Resolve category slug → IDs (parent + all descendants recursively)
 	var categoryIDs []int64
 	var attrDefs []*models.AttrDef
 	var activeCatName, catSeoTitle, catSeoDesc string
@@ -68,14 +68,25 @@ func (h *CatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
 			activeCatName = catObj.Name
 			catSeoTitle   = catObj.SeoTitle
 			catSeoDesc    = catObj.SeoDescription
-			// Collect the category itself + all its children from the flat list
+
+			// Build a children lookup map for recursive traversal.
 			allCats, _ := h.catRepo.List()
-			categoryIDs = append(categoryIDs, catObj.ID)
+			childrenOf := make(map[int64][]int64, len(allCats))
 			for _, c := range allCats {
-				if c.ParentID != nil && *c.ParentID == catObj.ID {
-					categoryIDs = append(categoryIDs, c.ID)
+				if c.ParentID != nil {
+					childrenOf[*c.ParentID] = append(childrenOf[*c.ParentID], c.ID)
 				}
 			}
+			// Collect the root category + all descendants via BFS/DFS.
+			var collectDescendants func(id int64)
+			collectDescendants = func(id int64) {
+				categoryIDs = append(categoryIDs, id)
+				for _, childID := range childrenOf[id] {
+					collectDescendants(childID)
+				}
+			}
+			collectDescendants(catObj.ID)
+
 			// Load attr defs for the selected category (for filter sidebar)
 			if h.catSvc != nil {
 				attrDefs, _ = h.catSvc.ListDefs(catObj.ID)

@@ -117,6 +117,19 @@ func (s *CategoryService) Update(id int64, name, slug string, parentID *int64, s
 	if slug == "" {
 		slug = slugify(name)
 	}
+
+	// Prevent cycles: parentID must not be id itself or any of its descendants.
+	if parentID != nil {
+		if *parentID == id {
+			return errors.New("категория не может быть родителем самой себя")
+		}
+		// Load flat list to check ancestry
+		flat, _ := s.cats.List()
+		if isDescendant(id, *parentID, flat) {
+			return errors.New("нельзя назначить потомка в качестве родителя")
+		}
+	}
+
 	c.Name = name
 	c.Slug = slug
 	c.ParentID = parentID
@@ -216,6 +229,32 @@ func slugify(s string) string {
 		slug = strings.ReplaceAll(slug, "--", "-")
 	}
 	return slug
+}
+
+// isDescendant reports whether candidateID is a descendant of rootID in the flat list.
+func isDescendant(rootID, candidateID int64, flat []*models.Category) bool {
+	// Build parent lookup
+	parentOf := make(map[int64]*int64, len(flat))
+	for _, c := range flat {
+		parentOf[c.ID] = c.ParentID
+	}
+	// Walk up from candidateID; if we hit rootID, it's a descendant (or cyclic).
+	visited := make(map[int64]bool)
+	cur := candidateID
+	for {
+		pid, ok := parentOf[cur]
+		if !ok || pid == nil {
+			return false
+		}
+		if *pid == rootID {
+			return true
+		}
+		if visited[*pid] {
+			return false // cycle guard
+		}
+		visited[*pid] = true
+		cur = *pid
+	}
 }
 
 func parseID(s string, out *int64) (bool, error) {

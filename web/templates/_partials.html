@@ -17,3 +17,37 @@
   <a href="/admin/settings" class="admin-nav__link">⚙️ Настройки</a>
 </nav>
 {{end}}
+
+{{/*
+  catNode — рекурсивный узел дерева категорий.
+  Принимает map (см. dict):
+    Cat    *models.Category — текущая категория
+    Active string           — slug активной категории
+    Depth  int              — уровень вложенности (0 = корень)
+*/}}
+{{define "catNode"}}
+{{$cat    := .Cat}}
+{{$active := .Active}}
+{{$depth  := .Depth}}
+{{$indent := mul $depth 12}}{{/* px отступа */}}
+<li class="sidebar__item">
+  {{if $cat.Children}}
+  {{$isOpen := isActiveParent $active $cat}}
+  <div class="sidebar__group" style="padding-left:{{$indent}}px">
+    <a href="/catalog/{{$cat.Slug}}"
+       class="sidebar__link {{if eq $active $cat.Slug}}sidebar__link--active{{end}}">{{$cat.Name}}</a>
+    <button class="sidebar__toggle cat-toggle" aria-label="Развернуть"
+            {{if or $isOpen (eq $active $cat.Slug)}}data-open="true"{{end}}>▾</button>
+  </div>
+  <ul class="sidebar__sub {{if or $isOpen (eq $active $cat.Slug)}}sidebar__sub--open{{end}}">
+    {{range $cat.Children}}
+      {{template "catNode" (dict "Cat" . "Active" $active "Depth" (add $depth 1))}}
+    {{end}}
+  </ul>
+  {{else}}
+  <a href="/catalog/{{$cat.Slug}}"
+     class="sidebar__link {{if eq $active $cat.Slug}}sidebar__link--active{{end}}"
+     style="padding-left:{{$indent}}px">{{$cat.Name}}</a>
+  {{end}}
+</li>
+{{end}}

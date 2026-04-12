@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"magaz/internal/middleware"
 	"magaz/internal/models"
@@ -54,6 +55,7 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, settings
 	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
+		"mul": func(a, b int) int { return a * b },
 		"mulfi": func(a float64, b int) float64 { return a * float64(b) },
 		"string": func(v any) string { return fmt.Sprint(v) },
 		"statusLabel": func(s models.OrderStatus) string { return s.Label() },
@@ -89,13 +91,44 @@ func NewBase(store *sessions.CookieStore, cartSvc *service.CartService, settings
 			}
 			return s
 		},
+		// isActiveParent рекурсивно ищет activeSlug среди всех потомков cat.
 		"isActiveParent": func(activeSlug string, cat *models.Category) bool {
-			for _, child := range cat.Children {
-				if child.Slug == activeSlug {
-					return true
+			var check func([]*models.Category) bool
+			check = func(children []*models.Category) bool {
+				for _, child := range children {
+					if child.Slug == activeSlug {
+						return true
+					}
+					if check(child.Children) {
+						return true
+					}
 				}
+				return false
 			}
-			return false
+			return check(cat.Children)
+		},
+		// dict создаёт map[string]any из пар ключ-значение.
+		// Используется для передачи данных в рекурсивные подшаблоны.
+		"dict": func(pairs ...any) (map[string]any, error) {
+			if len(pairs)%2 != 0 {
+				return nil, fmt.Errorf("dict: нечётное число аргументов")
+			}
+			m := make(map[string]any, len(pairs)/2)
+			for i := 0; i < len(pairs); i += 2 {
+				key, ok := pairs[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict: ключ должен быть строкой")
+				}
+				m[key] = pairs[i+1]
+			}
+			return m, nil
+		},
+		// repeat возвращает строку s, повторённую n раз (для CSS-отступов).
+		"repeat": func(n int, s string) string {
+			if n <= 0 {
+				return ""
+			}
+			return strings.Repeat(s, n)
 		},
 	}
 

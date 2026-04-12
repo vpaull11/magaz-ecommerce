@@ -12,35 +12,7 @@
           </a>
         </li>
         {{range .Data.CategoryTree}}
-        <li class="sidebar__item">
-          {{if .Children}}
-          <!-- Parent category with children — expandable -->
-          <div class="sidebar__group">
-            <a href="/catalog/{{.Slug}}"
-               class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
-              {{.Name}}
-            </a>
-            <button class="sidebar__toggle" aria-label="Развернуть"
-                    {{if isActiveParent $.Data.ActiveCategory .}}data-open="true"{{end}}>▾</button>
-          </div>
-          <ul class="sidebar__sub {{if isActiveParent $.Data.ActiveCategory .}}sidebar__sub--open{{end}}">
-            {{range .Children}}
-            <li>
-              <a href="/catalog/{{.Slug}}"
-                 class="sidebar__link sidebar__link--sub {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
-                {{.Name}}
-              </a>
-            </li>
-            {{end}}
-          </ul>
-          {{else}}
-          <!-- Leaf category — no children -->
-          <a href="/catalog/{{.Slug}}"
-             class="sidebar__link {{if eq $.Data.ActiveCategory .Slug}}sidebar__link--active{{end}}">
-            {{.Name}}
-          </a>
-          {{end}}
-        </li>
+          {{template "catNode" (dict "Cat" . "Active" $.Data.ActiveCategory "Depth" 0)}}
         {{end}}
       </ul>
 
